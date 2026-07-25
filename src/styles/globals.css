@@ -1,0 +1,103 @@
+/* Marquee animation */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* Luxury float for perfume bottle */
+@keyframes floatBottle {
+  0%, 100% { transform: translateY(0px) rotate(-2deg); }
+  50% { transform: translateY(-18px) rotate(-2deg); }
+}
+
+/* Ambient gold glow pulse */
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(1.08); }
+}
+
+/* Shimmer for gold elements */
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* Subtle grain texture overlay */
+@keyframes grain {
+  0%, 100% { transform: translate(0,0); }
+  10% { transform: translate(-1%,-1%); }
+  30% { transform: translate(1%,-1%); }
+  50% { transform: translate(-1%,1%); }
+  70% { transform: translate(1%,1%); }
+  90% { transform: translate(-1%,-1%); }
+}
+
+.float-bottle {
+  animation: floatBottle 6s ease-in-out infinite;
+}
+
+.glow-pulse {
+  animation: glowPulse 4s ease-in-out infinite;
+}
+
+.gold-shimmer {
+  background: linear-gradient(90deg, #C9A96E 0%, #E8D5B0 40%, #C9A96E 60%, #9E7D4A 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 4s linear infinite;
+}
+
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
+/* Scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201, 169, 110, 0.2) transparent;
+}
+*::-webkit-scrollbar { width: 4px; height: 4px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: rgba(201, 169, 110, 0.2); border-radius: 2px; }
+*::-webkit-scrollbar-thumb:hover { background: rgba(201, 169, 110, 0.4); }
+
+/* Luxury text selection */
+::selection {
+  background: rgba(201, 169, 110, 0.2);
+  color: #F8F4ED;
+}
+
+/* Gold divider ornament */
+.ornament {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: #C9A96E;
+}
+.ornament::before, .ornament::after {
+  content: '';
+  display: block;
+  width: 40px;
+  height: 1px;
+  background: #C9A96E;
+  opacity: 0.6;
+}
+
+/* Grain overlay for luxury texture */
+.grain-overlay::after {
+  content: '';
+  position: fixed;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  opacity: 0.022;
+  pointer-events: none;
+  z-index: 9999;
+  animation: grain 8s steps(10) infinite;
+}
