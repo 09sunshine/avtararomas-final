@@ -159,3 +159,36 @@ insert into public.store_settings (id)
 values ('default')
 on conflict (id) do nothing;
 
+create table if not exists public.keep_alive_logs (
+  id uuid primary key default gen_random_uuid(),
+  status text not null default 'success' check (status in ('success', 'warning', 'error', 'failed')),
+  response_status integer default 200,
+  duration_ms integer default 0,
+  message text,
+  triggered_by text default 'schedule',
+  details jsonb default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists keep_alive_logs_created_at_idx on public.keep_alive_logs (created_at desc);
+
+-- Enable Row Level Security (RLS)
+alter table public.keep_alive_logs enable row level security;
+
+-- Allow service_role full access
+create policy "Allow service_role full access on keep_alive_logs"
+  on public.keep_alive_logs for all
+  using (true)
+  with check (true);
+
+-- Allow authenticated users to view logs
+create policy "Allow authenticated read on keep_alive_logs"
+  on public.keep_alive_logs for select
+  to authenticated
+  using (true);
+
+-- Allow anon and service_role to insert logs (from GitHub actions keepalive workflow)
+create policy "Allow insert on keep_alive_logs"
+  on public.keep_alive_logs for insert
+  with check (true);
+

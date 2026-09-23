@@ -535,7 +535,7 @@ export default function Home() {
               {/* Floating label */}
               <div className="absolute bottom-8 left-8 bg-[#080807]/90 backdrop-blur-sm border border-[rgba(201,169,110,0.2)] px-6 py-4">
                 <p className="text-xs tracking-[0.3em] uppercase text-primary mb-1" style={{ fontFamily: "var(--font-mono)", fontWeight: 300 }}>Founded</p>
-                <p className="text-3xl text-foreground" style={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontWeight: 300 }}>2019</p>
+                <p className="text-3xl text-foreground" style={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontWeight: 300 }}>2026</p>
               </div>
             </div>
           </FadeIn>

@@ -2,8 +2,45 @@ import { Router } from "express";
 import { supabase } from "../lib/supabase.js";
 import { getStoreSettings, updateStoreSettings } from "../lib/settingsStore.js";
 import { requireAdmin } from "../middleware/auth.js";
+import { getFallbackLogs, saveFallbackLog, deleteFallbackLog } from "../lib/keepAliveStore.js";
 
 export const adminRouter = Router();
+
+// Webhook for GitHub Actions keepalive workflow (authenticated via service role key)
+adminRouter.post("/keep-alive/record", async (req, res, next) => {
+  try {
+    const keepaliveKey = (req.headers["x-keepalive-key"] as string) || req.headers["authorization"]?.replace(/^Bearer\s+/i, "");
+    const expectedKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!keepaliveKey || keepaliveKey !== expectedKey) {
+      return res.status(401).json({ error: "Unauthorized keepalive submission" });
+    }
+
+    const { response_status, duration_ms, triggered_by, message, details } = req.body || {};
+    const status: "success" | "warning" | "error" | "failed" =
+      ["success", "warning", "error", "failed"].includes(req.body?.status) ? req.body.status : "success";
+    const payload = {
+      status,
+      response_status: Number(response_status) || 200,
+      duration_ms: Number(duration_ms) || 0,
+      triggered_by: triggered_by || "schedule",
+      message: message || "Keep-alive ping recorded",
+      details: details || {},
+    };
+
+    const { data, error } = await supabase.from("keep_alive_logs").insert(payload).select().single();
+    if (error) {
+      if (error.code === "PGRST205") {
+        const fallback = saveFallbackLog(payload);
+        return res.json({ success: true, log: fallback, tableExists: false });
+      }
+      throw new Error(error.message);
+    }
+
+    res.json({ success: true, log: data, tableExists: true });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // Protect all admin endpoints with administrator authentication
 adminRouter.use(requireAdmin);
@@ -165,6 +202,123 @@ adminRouter.put("/settings", async (req, res, next) => {
   try {
     const updated = await updateStoreSettings(req.body);
     res.json(updated);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Admin Keep-Alive Endpoints
+adminRouter.get("/keep-alive", async (_req, res, next) => {
+  try {
+    const { data, error } = await supabase
+      .from("keep_alive_logs")
+      .select("id, status, response_status, duration_ms, message, triggered_by, details, created_at")
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    if (error) {
+      if (error.code === "PGRST205") {
+        const fallback = getFallbackLogs();
+        return res.json({ logs: fallback, tableExists: false });
+      }
+      throw new Error(error.message);
+    }
+
+    const logs = (data || []).map((row) => ({
+      id: row.id,
+      status: row.status,
+      responseStatus: row.response_status,
+      durationMs: row.duration_ms,
+      message: row.message,
+      triggeredBy: row.triggered_by,
+      details: row.details || {},
+      createdAt: row.created_at,
+    }));
+
+    if (logs.length === 0) {
+      const fallback = getFallbackLogs();
+      if (fallback.length > 0) {
+        return res.json({ logs: fallback, tableExists: true });
+      }
+    }
+
+    res.json({ logs, tableExists: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.delete("/keep-alive/:id", async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { error } = await supabase.from("keep_alive_logs").delete().eq("id", id);
+    deleteFallbackLog(id);
+
+    if (error && error.code !== "PGRST205") {
+      throw new Error(error.message);
+    }
+
+    res.json({ success: true, id, message: "Keep-alive log deleted successfully from database." });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.post("/keep-alive/test-ping", async (_req, res, next) => {
+  try {
+    const start = Date.now();
+    const { error: pingError } = await supabase
+      .from("store_settings")
+      .select("id")
+      .limit(1);
+    const durationMs = Date.now() - start;
+
+    const status: "error" | "success" = pingError ? "error" : "success";
+    const responseStatus = pingError ? 500 : 200;
+    const message = pingError
+      ? `Supabase ping failed: ${pingError.message}`
+      : `Supabase ping successful (HTTP 200 in ${durationMs}ms)`;
+
+    const payload = {
+      status,
+      response_status: responseStatus,
+      duration_ms: durationMs,
+      message,
+      triggered_by: "admin_test",
+      details: {
+        pinged_table: "store_settings",
+        duration_ms: durationMs,
+        timestamp: new Date().toISOString(),
+      },
+    };
+
+    const { data, error } = await supabase
+      .from("keep_alive_logs")
+      .insert(payload)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST205") {
+        const fallback = saveFallbackLog(payload);
+        return res.json({ log: fallback, tableExists: false });
+      }
+      throw new Error(error.message);
+    }
+
+    res.json({
+      log: {
+        id: data.id,
+        status: data.status,
+        responseStatus: data.response_status,
+        durationMs: data.duration_ms,
+        message: data.message,
+        triggeredBy: data.triggered_by,
+        details: data.details || {},
+        createdAt: data.created_at,
+      },
+      tableExists: true,
+    });
   } catch (err) {
     next(err);
   }

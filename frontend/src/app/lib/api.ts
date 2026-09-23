@@ -512,5 +512,39 @@ export async function resetPasswordBackend(payload: { email: string; newPassword
   });
 }
 
+// Keep-Alive API
+export interface KeepAliveLog {
+  id: string;
+  status: "success" | "warning" | "error" | "failed";
+  responseStatus: number;
+  durationMs: number;
+  message: string;
+  triggeredBy: string;
+  details: Record<string, any>;
+  createdAt: string;
+}
+
+export interface KeepAliveResponse {
+  logs: KeepAliveLog[];
+  tableExists: boolean;
+  message?: string;
+}
+
+export async function fetchKeepAliveLogs(): Promise<KeepAliveResponse> {
+  return requestJson<KeepAliveResponse>("/api/admin/keep-alive");
+}
+
+export async function deleteKeepAliveLog(id: string): Promise<{ success: boolean; id: string; message: string }> {
+  return requestJson<{ success: boolean; id: string; message: string }>(`/api/admin/keep-alive/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export async function triggerKeepAlivePing(): Promise<{ log: KeepAliveLog; tableExists: boolean }> {
+  return requestJson<{ log: KeepAliveLog; tableExists: boolean }>("/api/admin/keep-alive/test-ping", {
+    method: "POST",
+  });
+}
+
 
 

@@ -8,7 +8,7 @@ import {
   Package, ShoppingCart, Users, TrendingUp, Plus, Pencil, Trash2, Eye,
   ArrowUpRight, ArrowDownRight, CheckCircle2, Clock, Truck, XCircle, Tag,
   BarChart2, Settings, LogOut, X, Save, Bell, Globe, Mail, AlertTriangle,
-  ToggleLeft, ToggleRight, Search, Menu,
+  ToggleLeft, ToggleRight, Search, Menu, Activity, RefreshCw, Play, Copy, Check,
 } from "lucide-react";
 import { useAuth } from "../../stores/authStore";
 import { motion } from "motion/react";
@@ -28,6 +28,10 @@ import {
   deleteCoupon as apiDeleteCoupon,
   fetchStoreSettings,
   updateStoreSettings as apiUpdateSettings,
+  fetchKeepAliveLogs,
+  deleteKeepAliveLog,
+  triggerKeepAlivePing,
+  type KeepAliveLog,
   type ApiOrder,
   type ApiOverview,
   type ApiCoupon,
@@ -38,7 +42,7 @@ import { normalizeImageUrl, normalizeImageUrls } from "../../lib/image";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type AdminTab = "overview" | "products" | "orders" | "coupons" | "settings";
+type AdminTab = "overview" | "products" | "orders" | "coupons" | "settings" | "keepalive";
 type OrderStatus = "Delivered" | "Shipped" | "Processing" | "Cancelled";
 
 interface AdminOrder {
@@ -201,6 +205,25 @@ const ALL_STATUSES: OrderStatus[] = ["Processing", "Shipped", "Delivered", "Canc
 
 const formatPrice = (p: number) =>
   new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(p);
+
+function formatRelativeTime(dateString: string): string {
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    if (diffMs < 0) return "just now";
+    const diffSec = Math.floor(diffMs / 1000);
+    if (diffSec < 60) return `${diffSec}s ago`;
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr}h ago`;
+    const diffDays = Math.floor(diffHr / 24);
+    return `${diffDays}d ago`;
+  } catch {
+    return dateString;
+  }
+}
 
 function mapStatus(status: ApiOrder["status"]): OrderStatus {
   switch (status) {
@@ -1210,6 +1233,15 @@ export default function AdminDashboard() {
   const [editingCoupon, setEditingCoupon]   = useState<Coupon | null>(null);
   const [deleteCouponCode, setDeleteCouponCode] = useState<string | null>(null);
 
+  // Keep-Alive
+  const [keepAliveLogs, setKeepAliveLogs]             = useState<KeepAliveLog[]>([]);
+  const [keepAliveTableExists, setKeepAliveTableExists] = useState(true);
+  const [loadingKeepAlive, setLoadingKeepAlive]       = useState(false);
+  const [deleteKeepAliveId, setDeleteKeepAliveId]     = useState<string | null>(null);
+  const [viewingKeepAliveLog, setViewingKeepAliveLog] = useState<KeepAliveLog | null>(null);
+  const [pingingLive, setPingingLive]                 = useState(false);
+  const [copiedSql, setCopiedSql]                     = useState(false);
+
   // Helpers
   const openAdd = () => { setEditingProduct(null); setProductForm(EMPTY_FORM); setDrawerOpen(true); };
   const openEdit = (p: Product) => { setEditingProduct(p); setProductForm(productToForm(p)); setDrawerOpen(true); };
@@ -1231,6 +1263,43 @@ export default function AdminDashboard() {
     }
   };
 
+  const refreshKeepAlive = async () => {
+    setLoadingKeepAlive(true);
+    try {
+      const res = await fetchKeepAliveLogs();
+      setKeepAliveLogs(res.logs || []);
+      setKeepAliveTableExists(res.tableExists);
+    } catch (err) {
+      console.error("Failed to load keep-alive logs:", err);
+    } finally {
+      setLoadingKeepAlive(false);
+    }
+  };
+
+  const handleLivePing = async () => {
+    setPingingLive(true);
+    try {
+      const res = await triggerKeepAlivePing();
+      toast.success("Live keep-alive ping executed and recorded in database!");
+      setKeepAliveLogs((prev) => [res.log, ...prev]);
+      setKeepAliveTableExists(res.tableExists);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to trigger keep-alive test ping");
+    } finally {
+      setPingingLive(false);
+    }
+  };
+
+  const handleDeleteKeepAlive = async (id: string) => {
+    try {
+      await deleteKeepAliveLog(id);
+      toast.success("Keep-alive log deleted from database.");
+      setKeepAliveLogs((prev) => prev.filter((item) => item.id !== id));
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete keep-alive log");
+    }
+  };
+
   useEffect(() => {
     let active = true;
 
@@ -1238,15 +1307,18 @@ export default function AdminDashboard() {
       setLoadingOrders(true);
 
       try {
-        const [ordersData, overviewData, productsData, couponsData] = await Promise.all([
+        const [ordersData, overviewData, productsData, couponsData, keepAliveData] = await Promise.all([
           fetchAllOrders(),
           fetchAdminOverview(),
           fetchProducts(),
           fetchCoupons().catch(() => []),
+          fetchKeepAliveLogs().catch(() => ({ logs: [], tableExists: true })),
         ]);
         if (!active) return;
         setAllOrders(ordersData.map(mapAdminOrder));
         setOverview(overviewData);
+        setKeepAliveLogs(keepAliveData.logs || []);
+        setKeepAliveTableExists(keepAliveData.tableExists);
         setAllCoupons(couponsData.map((c) => ({
           code: c.code,
           discount: c.discount,
@@ -1425,11 +1497,12 @@ export default function AdminDashboard() {
   });
 
   const TABS: { id: AdminTab; label: string; icon: typeof BarChart2 }[] = [
-    { id: "overview",  label: "Overview",  icon: BarChart2 },
-    { id: "products",  label: "Products",  icon: Package },
-    { id: "orders",    label: "Orders",    icon: ShoppingCart },
-    { id: "coupons",   label: "Coupons",   icon: Tag },
-    { id: "settings",  label: "Settings",  icon: Settings },
+    { id: "overview",   label: "Overview",   icon: BarChart2 },
+    { id: "products",   label: "Products",   icon: Package },
+    { id: "orders",     label: "Orders",     icon: ShoppingCart },
+    { id: "coupons",    label: "Coupons",    icon: Tag },
+    { id: "keepalive",  label: "Keep-Alive", icon: Activity },
+    { id: "settings",   label: "Settings",   icon: Settings },
   ];
 
   return (
@@ -1545,6 +1618,35 @@ export default function AdminDashboard() {
                 <StatCard title="Total Orders"     value={String(overview?.totalOrders ?? allOrders.length)} change="Live" icon={ShoppingCart} up={true} />
                 <StatCard title="Active Products"  value={String(allProducts.length)} change="+2" icon={Package} up={true} />
                 <StatCard title="Customers"        value={String(overview?.totalCustomers ?? 0)}      change="Live"  icon={Users}        up={true} />
+              </div>
+
+              {/* Keep-Alive Status Banner */}
+              <div className="bg-[#0A0908] border border-[rgba(201,169,110,0.15)] p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="relative flex h-3 w-3 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-foreground font-medium" style={{ fontFamily: "var(--font-body)" }}>
+                        Supabase Keep-Alive Active
+                      </span>
+                      <span className="text-[10px] text-primary border border-primary/30 px-1.5 py-0.5 rounded" style={{ fontFamily: "var(--font-mono)" }}>
+                        {keepAliveLogs.length} runs recorded
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-0.5" style={{ fontFamily: "var(--font-mono)", fontWeight: 300 }}>
+                      Last ping: {keepAliveLogs[0] ? `${formatRelativeTime(keepAliveLogs[0].createdAt)} (${keepAliveLogs[0].status.toUpperCase()})` : "Awaiting first run"} · Automatic cron: Every 3 days
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setTab("keepalive")}
+                  className="text-xs text-primary hover:text-[#E8D5B0] transition-colors flex items-center gap-1 font-mono shrink-0"
+                >
+                  View Keep-Alive Logs →
+                </button>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1930,6 +2032,282 @@ export default function AdminDashboard() {
 
           {/* ── SETTINGS ── */}
           {tab === "settings" && <SettingsPanel />}
+
+          {/* ── KEEP-ALIVE ── */}
+          {tab === "keepalive" && (
+            <div className="flex flex-col gap-6">
+              {/* Header Bar */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-[#0A0908] border border-[rgba(201,169,110,0.12)] p-5 md:p-6">
+                <div>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 border border-[rgba(201,169,110,0.2)] text-primary bg-[#050504]">
+                      <Activity size={18} strokeWidth={1.5} />
+                    </div>
+                    <div>
+                      <h2 className="text-xl md:text-2xl text-foreground font-light" style={{ fontFamily: "var(--font-display)", fontStyle: "italic" }}>
+                        Supabase Keep-Alive & Automation
+                      </h2>
+                      <p className="text-xs text-muted-foreground mt-0.5" style={{ fontFamily: "var(--font-mono)", fontWeight: 300 }}>
+                        Cron runs every 3 days via GitHub Actions to keep Supabase awake and prune expired data
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={refreshKeepAlive}
+                    disabled={loadingKeepAlive}
+                    className="flex items-center gap-2 px-4 py-2.5 border border-[rgba(201,169,110,0.2)] text-xs tracking-[0.15em] uppercase text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors disabled:opacity-50"
+                    style={{ fontFamily: "var(--font-body)", fontWeight: 300 }}
+                  >
+                    <RefreshCw size={13} className={loadingKeepAlive ? "animate-spin" : ""} strokeWidth={1.5} />
+                    Refresh
+                  </button>
+
+                  <button
+                    onClick={handleLivePing}
+                    disabled={pingingLive}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-primary text-[#080807] text-xs tracking-[0.2em] uppercase hover:bg-[#E8D5B0] transition-colors disabled:opacity-50"
+                    style={{ fontFamily: "var(--font-body)", fontWeight: 400 }}
+                  >
+                    {pingingLive ? (
+                      <>
+                        <RefreshCw size={13} className="animate-spin" strokeWidth={1.5} />
+                        Pinging...
+                      </>
+                    ) : (
+                      <>
+                        <Play size={13} strokeWidth={1.5} />
+                        Test Ping Now
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Status KPI Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-[#0A0908] border border-[rgba(201,169,110,0.1)] p-5">
+                  <p className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-3" style={{ fontFamily: "var(--font-mono)" }}>Status</p>
+                  <div className="flex items-center gap-2.5">
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                    </span>
+                    <span className="text-xl text-emerald-400 font-light" style={{ fontFamily: "var(--font-display)", fontStyle: "italic" }}>
+                      Active
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-2" style={{ fontFamily: "var(--font-mono)", fontWeight: 300 }}>
+                    Target: Supabase REST API
+                  </p>
+                </div>
+
+                <div className="bg-[#0A0908] border border-[rgba(201,169,110,0.1)] p-5">
+                  <p className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-3" style={{ fontFamily: "var(--font-mono)" }}>Total Executions</p>
+                  <p className="text-2xl text-foreground font-light" style={{ fontFamily: "var(--font-mono)", fontWeight: 300 }}>
+                    {keepAliveLogs.length}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-2" style={{ fontFamily: "var(--font-mono)", fontWeight: 300 }}>
+                    Saved in database
+                  </p>
+                </div>
+
+                <div className="bg-[#0A0908] border border-[rgba(201,169,110,0.1)] p-5">
+                  <p className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-3" style={{ fontFamily: "var(--font-mono)" }}>Last Ping</p>
+                  <p className="text-xl text-foreground truncate" style={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontWeight: 300 }}>
+                    {keepAliveLogs[0] ? formatRelativeTime(keepAliveLogs[0].createdAt) : "No runs yet"}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-2 truncate" style={{ fontFamily: "var(--font-mono)", fontWeight: 300 }}>
+                    {keepAliveLogs[0] ? new Date(keepAliveLogs[0].createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Awaiting first run"}
+                  </p>
+                </div>
+
+                <div className="bg-[#0A0908] border border-[rgba(201,169,110,0.1)] p-5">
+                  <p className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-3" style={{ fontFamily: "var(--font-mono)" }}>Schedule</p>
+                  <p className="text-xl text-primary font-light" style={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontWeight: 300 }}>
+                    Every 3 Days
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-2" style={{ fontFamily: "var(--font-mono)", fontWeight: 300 }}>
+                    06:00 UTC (11:30 AM IST)
+                  </p>
+                </div>
+              </div>
+
+              {/* SQL Setup Notice (Shown if table pending) */}
+              {!keepAliveTableExists && (
+                <div className="bg-[#0F0E0D] border border-amber-500/30 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle size={18} className="text-amber-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-amber-200 font-medium" style={{ fontFamily: "var(--font-body)" }}>
+                        Database Table Setup Recommended
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5" style={{ fontFamily: "var(--font-mono)", fontWeight: 300 }}>
+                        Currently using resilient local storage. Run the SQL schema in your Supabase SQL Editor to enable direct postgres table storage.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const sql = `create table if not exists public.keep_alive_logs (
+  id uuid primary key default gen_random_uuid(),
+  status text not null default 'success',
+  response_status integer default 200,
+  duration_ms integer default 0,
+  message text,
+  triggered_by text default 'schedule',
+  details jsonb default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+alter table public.keep_alive_logs enable row level security;
+create policy "Allow all on keep_alive_logs" on public.keep_alive_logs for all using (true) with check (true);`;
+                      navigator.clipboard.writeText(sql);
+                      setCopiedSql(true);
+                      toast.success("SQL setup copied to clipboard!");
+                      setTimeout(() => setCopiedSql(false), 2500);
+                    }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 border border-amber-500/40 text-amber-300 text-xs tracking-wider uppercase hover:bg-amber-500/10 transition-colors shrink-0"
+                    style={{ fontFamily: "var(--font-mono)" }}
+                  >
+                    {copiedSql ? <Check size={12} /> : <Copy size={12} />}
+                    {copiedSql ? "Copied" : "Copy SQL"}
+                  </button>
+                </div>
+              )}
+
+              {/* Keep-Alive Runs Table */}
+              <div className="bg-[#0A0908] border border-[rgba(201,169,110,0.1)] overflow-hidden">
+                <div className="p-5 border-b border-[rgba(201,169,110,0.08)] flex items-center justify-between">
+                  <div>
+                    <h3 className="text-base text-foreground font-light" style={{ fontFamily: "var(--font-display)", fontStyle: "italic" }}>
+                      Keep-Alive Run History
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5" style={{ fontFamily: "var(--font-mono)", fontWeight: 300 }}>
+                      Showing latest database logs (sorted newest first)
+                    </p>
+                  </div>
+                  <span className="text-xs text-muted-foreground font-mono">
+                    {keepAliveLogs.length} {keepAliveLogs.length === 1 ? "entry" : "entries"}
+                  </span>
+                </div>
+
+                {keepAliveLogs.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+                    <Activity size={36} strokeWidth={1} className="text-muted-foreground/40 mb-3" />
+                    <p className="text-lg text-foreground font-light mb-1" style={{ fontFamily: "var(--font-display)", fontStyle: "italic" }}>
+                      No Keep-Alive Logs Yet
+                    </p>
+                    <p className="text-xs text-muted-foreground max-w-md mb-6 leading-relaxed" style={{ fontFamily: "var(--font-body)", fontWeight: 300 }}>
+                      The Supabase keep-alive GitHub workflow executes automatically every 3 days. Click below to trigger a live test ping right now.
+                    </p>
+                    <button
+                      onClick={handleLivePing}
+                      disabled={pingingLive}
+                      className="flex items-center gap-2 px-6 py-2.5 bg-primary text-[#080807] text-xs tracking-[0.2em] uppercase hover:bg-[#E8D5B0] transition-colors"
+                      style={{ fontFamily: "var(--font-body)", fontWeight: 400 }}
+                    >
+                      <Play size={13} strokeWidth={1.5} />
+                      Run Test Ping Now
+                    </button>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr className="border-b border-[rgba(201,169,110,0.08)] bg-[#050504]/50">
+                          <th className="py-3 px-4 text-[10px] tracking-[0.25em] uppercase text-muted-foreground font-light" style={{ fontFamily: "var(--font-mono)" }}>Status</th>
+                          <th className="py-3 px-4 text-[10px] tracking-[0.25em] uppercase text-muted-foreground font-light" style={{ fontFamily: "var(--font-mono)" }}>Trigger</th>
+                          <th className="py-3 px-4 text-[10px] tracking-[0.25em] uppercase text-muted-foreground font-light" style={{ fontFamily: "var(--font-mono)" }}>HTTP / Latency</th>
+                          <th className="py-3 px-4 text-[10px] tracking-[0.25em] uppercase text-muted-foreground font-light" style={{ fontFamily: "var(--font-mono)" }}>Activity & Details</th>
+                          <th className="py-3 px-4 text-[10px] tracking-[0.25em] uppercase text-muted-foreground font-light" style={{ fontFamily: "var(--font-mono)" }}>Executed At</th>
+                          <th className="py-3 px-4 text-[10px] tracking-[0.25em] uppercase text-muted-foreground font-light text-right" style={{ fontFamily: "var(--font-mono)" }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {keepAliveLogs.map((log) => {
+                          const isOk = log.status === "success" || log.responseStatus === 200;
+                          return (
+                            <tr key={log.id} className="border-b border-[rgba(201,169,110,0.06)] hover:bg-[#0F0E0D]/60 transition-colors">
+                              <td className="py-3.5 px-4 whitespace-nowrap">
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] border font-mono ${
+                                  isOk
+                                    ? "border-emerald-500/30 text-emerald-400 bg-emerald-500/10"
+                                    : "border-red-500/30 text-red-400 bg-red-500/10"
+                                }`}>
+                                  {isOk ? <CheckCircle2 size={12} strokeWidth={2} /> : <XCircle size={12} strokeWidth={2} />}
+                                  {log.status.toUpperCase()}
+                                </span>
+                              </td>
+
+                              <td className="py-3.5 px-4 whitespace-nowrap">
+                                <span className="text-xs text-foreground uppercase tracking-wider" style={{ fontFamily: "var(--font-mono)", fontWeight: 300 }}>
+                                  {log.triggeredBy.replace("_", " ")}
+                                </span>
+                              </td>
+
+                              <td className="py-3.5 px-4 whitespace-nowrap">
+                                <span className="text-xs text-foreground" style={{ fontFamily: "var(--font-mono)" }}>
+                                  {log.responseStatus} OK
+                                </span>
+                                {log.durationMs > 0 && (
+                                  <span className="text-[11px] text-muted-foreground ml-2 font-mono">
+                                    ({log.durationMs}ms)
+                                  </span>
+                                )}
+                              </td>
+
+                              <td className="py-3.5 px-4 max-w-md">
+                                <p className="text-xs text-foreground truncate" style={{ fontFamily: "var(--font-body)", fontWeight: 300 }}>
+                                  {log.message || "Supabase ping successful"}
+                                </p>
+                                {log.details && (
+                                  <p className="text-[10px] text-muted-foreground mt-0.5 truncate" style={{ fontFamily: "var(--font-mono)" }}>
+                                    {log.details.github_run_id ? `GitHub Run #${log.details.github_run_id}` : ""}
+                                    {log.details.orders_cleaned !== undefined ? ` · Orders cleaned: ${log.details.orders_cleaned}` : ""}
+                                  </p>
+                                )}
+                              </td>
+
+                              <td className="py-3.5 px-4 whitespace-nowrap">
+                                <p className="text-xs text-foreground" style={{ fontFamily: "var(--font-mono)", fontWeight: 300 }}>
+                                  {new Date(log.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })},{" "}
+                                  {new Date(log.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                </p>
+                                <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">
+                                  {formatRelativeTime(log.createdAt)}
+                                </p>
+                              </td>
+
+                              <td className="py-3.5 px-4 whitespace-nowrap text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    onClick={() => setViewingKeepAliveLog(log)}
+                                    title="View Execution Details"
+                                    className="p-2 border border-[rgba(201,169,110,0.2)] text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
+                                  >
+                                    <Eye size={13} strokeWidth={1.5} />
+                                  </button>
+                                  <button
+                                    onClick={() => setDeleteKeepAliveId(log.id)}
+                                    title="Delete from database"
+                                    className="p-2 border border-[rgba(201,169,110,0.2)] text-muted-foreground hover:text-red-400 hover:border-red-400/40 transition-colors"
+                                  >
+                                    <Trash2 size={13} strokeWidth={1.5} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -2031,6 +2409,82 @@ export default function AdminDashboard() {
         }}
         onClose={() => setDeleteCouponCode(null)}
       />
+
+      {/* ── Delete Keep-Alive Confirm ──────────────────────────────────── */}
+      <DeleteConfirm
+        open={!!deleteKeepAliveId}
+        label="Delete Keep-Alive Log"
+        message="This execution entry will be permanently deleted from the database. This action cannot be undone."
+        onConfirm={async () => {
+          if (deleteKeepAliveId) {
+            await handleDeleteKeepAlive(deleteKeepAliveId);
+            setDeleteKeepAliveId(null);
+          }
+        }}
+        onClose={() => setDeleteKeepAliveId(null)}
+      />
+
+      {/* ── View Keep-Alive Details Modal ───────────────────────────────── */}
+      <CentreModal
+        open={!!viewingKeepAliveLog}
+        onClose={() => setViewingKeepAliveLog(null)}
+        title="Execution Details"
+      >
+        {viewingKeepAliveLog && (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[rgba(201,169,110,0.1)]">
+              <span className="text-xs text-muted-foreground font-mono">Status:</span>
+              <span className={`text-xs uppercase font-mono px-2 py-0.5 border ${
+                viewingKeepAliveLog.status === "success"
+                  ? "border-emerald-500/30 text-emerald-400 bg-emerald-500/10"
+                  : "border-red-500/30 text-red-400 bg-red-500/10"
+              }`}>
+                {viewingKeepAliveLog.status} ({viewingKeepAliveLog.responseStatus} OK)
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between pb-3 border-b border-[rgba(201,169,110,0.1)]">
+              <span className="text-xs text-muted-foreground font-mono">Trigger:</span>
+              <span className="text-xs text-foreground font-mono uppercase">
+                {viewingKeepAliveLog.triggeredBy}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between pb-3 border-b border-[rgba(201,169,110,0.1)]">
+              <span className="text-xs text-muted-foreground font-mono">Duration:</span>
+              <span className="text-xs text-foreground font-mono">
+                {viewingKeepAliveLog.durationMs} ms
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between pb-3 border-b border-[rgba(201,169,110,0.1)]">
+              <span className="text-xs text-muted-foreground font-mono">Timestamp:</span>
+              <span className="text-xs text-foreground font-mono">
+                {new Date(viewingKeepAliveLog.createdAt).toLocaleString()}
+              </span>
+            </div>
+
+            <div>
+              <p className="text-[10px] tracking-[0.25em] uppercase text-muted-foreground font-mono mb-1.5">
+                Raw JSON Payload
+              </p>
+              <pre className="p-3 bg-[#050504] border border-[rgba(201,169,110,0.15)] text-[11px] text-primary/90 font-mono overflow-x-auto max-h-48 scrollbar-thin">
+                {JSON.stringify(viewingKeepAliveLog, null, 2)}
+              </pre>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => setViewingKeepAliveLog(null)}
+                className="px-5 py-2.5 bg-primary text-[#080807] text-xs tracking-[0.2em] uppercase hover:bg-[#E8D5B0] transition-colors"
+                style={{ fontFamily: "var(--font-body)", fontWeight: 400 }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+      </CentreModal>
 
     </div>
   );
