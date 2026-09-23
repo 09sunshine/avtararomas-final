@@ -1,0 +1,91 @@
+name: Supabase Keep-Alive & Cleanup
+
+on:
+  schedule:
+    # Every 3 days at 6:00 AM UTC (11:30 AM IST)
+    - cron: '0 6 */3 * *'
+  workflow_dispatch: # Allow manual trigger from GitHub Actions tab
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase (Keep Alive)
+        run: |
+          echo "🏓 Pinging Supabase to prevent cold sleep..."
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/store_settings?select=id&limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+          echo "Supabase responded with status: $RESPONSE"
+          if [ "$RESPONSE" -ne 200 ]; then
+            echo "❌ Supabase ping failed!"
+            exit 1
+          fi
+          echo "✅ Supabase is alive!"
+
+      - name: Ping Render Backend (Bonus Keep-Alive)
+        run: |
+          echo "🏓 Pinging Render backend..."
+          curl -s "${{ secrets.RENDER_BACKEND_URL }}/health" || true
+          echo ""
+          echo "✅ Render ping sent!"
+
+      - name: Cleanup Old Cancelled/Refunded Orders (90+ days)
+        run: |
+          echo "🧹 Cleaning up old cancelled/refunded orders..."
+          CUTOFF=$(date -d '90 days ago' -u +%Y-%m-%dT%H:%M:%SZ)
+
+          # Get IDs of old cancelled/refunded orders
+          OLD_ORDER_IDS=$(curl -s \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/orders?select=id&status=in.(cancelled,refunded)&created_at=lt.$CUTOFF" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            | jq -r '.[].id' 2>/dev/null)
+
+          if [ -z "$OLD_ORDER_IDS" ]; then
+            echo "No old cancelled/refunded orders to clean up."
+          else
+            COUNT=0
+            for ORDER_ID in $OLD_ORDER_IDS; do
+              # Delete order_items first (FK constraint: order_items -> orders)
+              curl -s -X DELETE \
+                "${{ secrets.SUPABASE_URL }}/rest/v1/order_items?order_id=eq.$ORDER_ID" \
+                -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+                -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" > /dev/null
+
+              # Then delete the order itself
+              curl -s -X DELETE \
+                "${{ secrets.SUPABASE_URL }}/rest/v1/orders?id=eq.$ORDER_ID" \
+                -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+                -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" > /dev/null
+
+              COUNT=$((COUNT + 1))
+              echo "  Deleted order: $ORDER_ID"
+            done
+            echo "✅ Cleaned up $COUNT old cancelled/refunded orders!"
+          fi
+
+      - name: Cleanup Expired Inactive Coupons (60+ days)
+        run: |
+          echo "🧹 Cleaning up expired inactive coupons..."
+          CUTOFF=$(date -d '60 days ago' -u +%Y-%m-%dT%H:%M:%SZ)
+
+          RESULT=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/coupons?active=eq.false&created_at=lt.$CUTOFF" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}")
+
+          echo "Delete request returned HTTP $RESULT"
+          echo "✅ Expired inactive coupons cleaned up!"
+
+      - name: Summary
+        run: |
+          echo "========================================="
+          echo "🎉 All tasks completed successfully!"
+          echo "  • Supabase pinged (keep-alive)"
+          echo "  • Render backend pinged"
+          echo "  • Old cancelled/refunded orders (90d+) cleaned"
+          echo "  • Expired inactive coupons (60d+) cleaned"
+          echo "  • Next run: in ~3 days"
+          echo "========================================="

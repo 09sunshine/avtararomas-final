@@ -1,0 +1,65 @@
+# ─── Dependencies ────────────────────────────────────────────
+node_modules/
+.pnpm-store/
+.yarn/
+
+# ─── Build outputs ───────────────────────────────────────────
+dist/
+build/
+.out/
+*.tsbuildinfo
+
+# ─── Environment files (NEVER commit secrets) ────────────────
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+.env.staging
+
+# ─── Logs ────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ─── OS files ────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ─── Editor & IDE ────────────────────────────────────────────
+.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+
+# ─── TypeScript cache ────────────────────────────────────────
+*.tsbuildinfo
+
+# ─── Vite / frontend build cache ─────────────────────────────
+.vite/
+frontend/.vite/
+
+# ─── Coverage & test reports ─────────────────────────────────
+coverage/
+.nyc_output/
+
+# ─── Misc temp files ─────────────────────────────────────────
+*.tmp
+*.temp
+.cache/

@@ -1,0 +1,29 @@
+{
+  "name": "avtar-aromas-backend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.55.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "express-rate-limit": "^8.6.1",
+    "nodemailer": "^9.0.3",
+    "razorpay": "^2.9.6",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.3.1",
+    "@types/nodemailer": "^8.0.1",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}

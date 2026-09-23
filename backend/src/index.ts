@@ -1,0 +1,101 @@
+import "dotenv/config";
+import express from "express";
+import cors from "cors";
+import { authRouter } from "./routes/auth.js";
+import { healthRouter } from "./routes/health.js";
+import { ordersRouter } from "./routes/orders.js";
+import { reviewsRouter } from "./routes/reviews.js";
+import { productsRouter } from "./routes/products.js";
+import { adminRouter } from "./routes/admin.js";
+import { webhooksRouter } from "./routes/webhooks.js";
+import { couponsRouter } from "./routes/coupons.js";
+import { contactRouter } from "./routes/contact.js";
+import { newsletterRouter } from "./routes/newsletter.js";
+import { errorHandler } from "./middleware/errorHandler.js";
+import {
+  apiLimiter,
+  authLimiter,
+  adminLimiter,
+  checkoutLimiter,
+  userActionLimiter,
+  methodAwareLimiter,
+} from "./middleware/rateLimiter.js";
+
+const app = express();
+const port = Number(process.env.PORT || 4001);
+
+// Support one or more comma-separated frontend origins
+const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+// Number of trusted reverse proxies (Render/Vercel/Nginx = 1). Must be set so that
+// req.ip is the real client IP, otherwise every user shares one rate-limit bucket.
+// Never use `true` here: express-rate-limit rejects a permissive trust proxy setting.
+app.set("trust proxy", Number(process.env.TRUST_PROXY_HOPS ?? (process.env.NODE_ENV === "production" ? 1 : 0)));
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow non-browser clients (curl, Razorpay webhooks, health checks) which send no Origin
+      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error(`Not allowed by CORS: ${origin}`));
+    },
+    credentials: true,
+  })
+);
+
+app.use(
+  express.json({
+    limit: "2mb",
+    // Keep the raw body so webhook signatures can be verified byte-for-byte
+    verify: (req, _res, buf) => {
+      (req as express.Request & { rawBody?: string }).rawBody = buf.toString("utf8");
+    },
+  })
+);
+
+// Health check - light rate limiting
+app.use("/health", apiLimiter, healthRouter);
+
+// Auth endpoints - strict rate limiting to prevent brute force
+app.use("/api/auth", authLimiter, authRouter);
+
+// Orders - reads (order history) stay generous, writes (checkout) are strict
+app.use("/api/orders", methodAwareLimiter(apiLimiter, checkoutLimiter), ordersRouter);
+
+// Reviews - reads are public browsing, posting a review is a user action
+app.use("/api/reviews", methodAwareLimiter(apiLimiter, userActionLimiter), reviewsRouter);
+
+// Products - public browsing, moderate limits
+app.use("/api/products", apiLimiter, productsRouter);
+
+// Admin - separate moderate limit
+app.use("/api/admin", adminLimiter, adminRouter);
+
+// Webhooks - Razorpay, moderate limit
+app.use("/api/webhooks", apiLimiter, webhooksRouter);
+
+// Coupons - reads are for the admin panel, validation/writes are user actions
+app.use("/api/coupons", methodAwareLimiter(apiLimiter, userActionLimiter), couponsRouter);
+
+// Contact form - prevent spam
+app.use("/api/contact", userActionLimiter, contactRouter);
+
+// Newsletter - prevent spam
+app.use("/api/newsletter", userActionLimiter, newsletterRouter);
+
+// Unknown routes should return JSON, not Express' default HTML error page
+app.use((req, res) => {
+  res.status(404).json({ error: `Route not found: ${req.method} ${req.originalUrl}` });
+});
+
+app.use(errorHandler);
+
+app.listen(port, () => {
+  const env = process.env.NODE_ENV || "development";
+  console.log(`Avtar Aromas backend running on port ${port} [${env}]`);
+});
+
+export default app;
