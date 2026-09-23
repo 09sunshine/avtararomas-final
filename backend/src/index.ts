@@ -24,27 +24,38 @@ import {
 const app = express();
 const port = Number(process.env.PORT || 4001);
 
-// Support one or more comma-separated frontend origins
-const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
-
 // Number of trusted reverse proxies (Render/Vercel/Nginx = 1). Must be set so that
 // req.ip is the real client IP, otherwise every user shares one rate-limit bucket.
 // Never use `true` here: express-rate-limit rejects a permissive trust proxy setting.
 app.set("trust proxy", Number(process.env.TRUST_PROXY_HOPS ?? (process.env.NODE_ENV === "production" ? 1 : 0)));
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow non-browser clients (curl, Razorpay webhooks, health checks) which send no Origin
-      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-      return callback(new Error(`Not allowed by CORS: ${origin}`));
-    },
-    credentials: true,
-  })
-);
+// Robust, universal CORS configuration
+// Reflects incoming origin so browsers accept credentials: true for custom domains, Vercel, localhost, etc.
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    // Non-browser clients (curl, mobile apps, Razorpay webhooks, health checks) send no Origin.
+    // Browser clients send their page Origin. Reflecting origin back satisfies CORS specification
+    // for all domains (e.g. custom domain, www subdomain, Vercel deployments, localhost).
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: [
+    "Origin",
+    "X-Requested-With",
+    "Content-Type",
+    "Accept",
+    "Authorization",
+    "Access-Control-Allow-Origin",
+    "Access-Control-Allow-Credentials",
+  ],
+  exposedHeaders: ["Set-Cookie"],
+  optionsSuccessStatus: 204,
+  maxAge: 86400, // 24 hours preflight cache
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 app.use(
   express.json({

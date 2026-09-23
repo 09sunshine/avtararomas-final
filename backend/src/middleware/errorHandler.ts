@@ -2,7 +2,14 @@ import type { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
 import { ApiError } from "../lib/errors.js";
 
-export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {
+export function errorHandler(err: unknown, req: Request, res: Response, _next: NextFunction) {
+  // Ensure CORS headers are attached on error responses so browsers don't mask error details
+  const origin = req.headers.origin;
+  if (origin && !res.getHeader("Access-Control-Allow-Origin")) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+  }
+
   if (err instanceof ApiError) {
     return res.status(err.statusCode).json({ error: err.message });
   }
