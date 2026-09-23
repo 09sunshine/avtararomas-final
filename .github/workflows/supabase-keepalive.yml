@@ -24,6 +24,7 @@ jobs:
           if [ -z "$URL" ]; then
             URL="https://gyzeddgjserpopeicjmv.supabase.co"
           fi
+          URL="$(printf '%s' "$URL" | tr -d '\r\n')"
 
           KEY="${{ secrets.SUPABASE_ANON_KEY }}"
           if [ -z "$KEY" ]; then
@@ -67,6 +68,7 @@ jobs:
           if [ -z "$URL" ]; then
             URL="https://gyzeddgjserpopeicjmv.supabase.co"
           fi
+          URL="$(printf '%s' "$URL" | tr -d '\r\n')"
 
           echo "🧹 Cleaning up old cancelled/refunded orders..."
           CUTOFF=$(date -d '90 days ago' -u +%Y-%m-%dT%H:%M:%SZ)
@@ -110,6 +112,7 @@ jobs:
           if [ -z "$URL" ]; then
             URL="https://gyzeddgjserpopeicjmv.supabase.co"
           fi
+          URL="$(printf '%s' "$URL" | tr -d '\r\n')"
 
           echo "🧹 Cleaning up expired inactive coupons..."
           CUTOFF=$(date -d '60 days ago' -u +%Y-%m-%dT%H:%M:%SZ)
