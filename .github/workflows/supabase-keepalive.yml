@@ -5,12 +5,11 @@ on:
     # Every 3 days at 6:00 AM UTC (11:30 AM IST)
     - cron: '0 6 */3 * *'
   workflow_dispatch: # Allow manual trigger from GitHub Actions tab
-
-env:
-  SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://gyzeddgjserpopeicjmv.supabase.co' }}
-  SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5emVkZGdqc2VycG9wZWljam12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5NjQ2MTEsImV4cCI6MjEwMDU0MDYxMX0.ATcF55nWXxXFiX1xfl7ZzLP6KswxOWoLbbcBDrcfFCU' }}
-  SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-  RENDER_BACKEND_URL: ${{ secrets.RENDER_BACKEND_URL }}
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/supabase-keepalive.yml'
 
 jobs:
   keepalive:
@@ -19,14 +18,24 @@ jobs:
       - name: Ping Supabase (Keep Alive)
         run: |
           echo "🏓 Pinging Supabase to prevent cold sleep..."
-          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
-            echo "❌ SUPABASE_URL or SUPABASE_ANON_KEY is missing!"
-            exit 1
+
+          # Read secret or use project default
+          URL="${{ secrets.SUPABASE_URL }}"
+          if [ -z "$URL" ]; then
+            URL="https://gyzeddgjserpopeicjmv.supabase.co"
           fi
+
+          KEY="${{ secrets.SUPABASE_ANON_KEY }}"
+          if [ -z "$KEY" ]; then
+            KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5emVkZGdqc2VycG9wZWljam12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5NjQ2MTEsImV4cCI6MjEwMDU0MDYxMX0.ATcF55nWXxXFiX1xfl7ZzLP6KswxOWoLbbcBDrcfFCU"
+          fi
+
+          echo "Target Supabase endpoint: $URL"
           RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
-            "${SUPABASE_URL}/rest/v1/store_settings?select=id&limit=1" \
-            -H "apikey: ${SUPABASE_ANON_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}")
+            "$URL/rest/v1/store_settings?select=id&limit=1" \
+            -H "apikey: $KEY" \
+            -H "Authorization: Bearer $KEY")
+
           echo "Supabase responded with status: $RESPONSE"
           if [ "$RESPONSE" -ne 200 ]; then
             echo "❌ Supabase ping failed with status $RESPONSE!"
@@ -36,9 +45,10 @@ jobs:
 
       - name: Ping Render Backend (Bonus Keep-Alive)
         run: |
-          if [ -n "$RENDER_BACKEND_URL" ]; then
-            echo "🏓 Pinging Render backend at $RENDER_BACKEND_URL..."
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${RENDER_BACKEND_URL}/health" || true)
+          RENDER_URL="${{ secrets.RENDER_BACKEND_URL }}"
+          if [ -n "$RENDER_URL" ]; then
+            echo "🏓 Pinging Render backend at $RENDER_URL..."
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$RENDER_URL/health" || true)
             echo "Render responded with status: $STATUS"
             echo "✅ Render ping completed!"
           else
@@ -47,19 +57,24 @@ jobs:
 
       - name: Cleanup Old Cancelled/Refunded Orders (90+ days)
         run: |
-          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+          SERVICE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+          if [ -z "$SERVICE_KEY" ]; then
             echo "ℹ️ SUPABASE_SERVICE_ROLE_KEY secret not set. Skipping order cleanup."
             exit 0
+          fi
+
+          URL="${{ secrets.SUPABASE_URL }}"
+          if [ -z "$URL" ]; then
+            URL="https://gyzeddgjserpopeicjmv.supabase.co"
           fi
 
           echo "🧹 Cleaning up old cancelled/refunded orders..."
           CUTOFF=$(date -d '90 days ago' -u +%Y-%m-%dT%H:%M:%SZ)
 
-          # Get IDs of old cancelled/refunded orders
           OLD_ORDER_IDS=$(curl -s \
-            "${SUPABASE_URL}/rest/v1/orders?select=id&status=in.(cancelled,refunded)&created_at=lt.$CUTOFF" \
-            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            "$URL/rest/v1/orders?select=id&status=in.(cancelled,refunded)&created_at=lt.$CUTOFF" \
+            -H "apikey: $SERVICE_KEY" \
+            -H "Authorization: Bearer $SERVICE_KEY" \
             | jq -r '.[].id' 2>/dev/null)
 
           if [ -z "$OLD_ORDER_IDS" ]; then
@@ -67,17 +82,15 @@ jobs:
           else
             COUNT=0
             for ORDER_ID in $OLD_ORDER_IDS; do
-              # Delete order_items first (FK constraint: order_items -> orders)
               curl -s -X DELETE \
-                "${SUPABASE_URL}/rest/v1/order_items?order_id=eq.$ORDER_ID" \
-                -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-                -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" > /dev/null
+                "$URL/rest/v1/order_items?order_id=eq.$ORDER_ID" \
+                -H "apikey: $SERVICE_KEY" \
+                -H "Authorization: Bearer $SERVICE_KEY" > /dev/null
 
-              # Then delete the order itself
               curl -s -X DELETE \
-                "${SUPABASE_URL}/rest/v1/orders?id=eq.$ORDER_ID" \
-                -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-                -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" > /dev/null
+                "$URL/rest/v1/orders?id=eq.$ORDER_ID" \
+                -H "apikey: $SERVICE_KEY" \
+                -H "Authorization: Bearer $SERVICE_KEY" > /dev/null
 
               COUNT=$((COUNT + 1))
               echo "  Deleted order: $ORDER_ID"
@@ -87,18 +100,24 @@ jobs:
 
       - name: Cleanup Expired Inactive Coupons (60+ days)
         run: |
-          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+          SERVICE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+          if [ -z "$SERVICE_KEY" ]; then
             echo "ℹ️ SUPABASE_SERVICE_ROLE_KEY secret not set. Skipping coupon cleanup."
             exit 0
+          fi
+
+          URL="${{ secrets.SUPABASE_URL }}"
+          if [ -z "$URL" ]; then
+            URL="https://gyzeddgjserpopeicjmv.supabase.co"
           fi
 
           echo "🧹 Cleaning up expired inactive coupons..."
           CUTOFF=$(date -d '60 days ago' -u +%Y-%m-%dT%H:%M:%SZ)
 
           RESULT=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE \
-            "${SUPABASE_URL}/rest/v1/coupons?active=eq.false&created_at=lt.$CUTOFF" \
-            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}")
+            "$URL/rest/v1/coupons?active=eq.false&created_at=lt.$CUTOFF" \
+            -H "apikey: $SERVICE_KEY" \
+            -H "Authorization: Bearer $SERVICE_KEY")
 
           echo "Delete request returned HTTP $RESULT"
           echo "✅ Expired inactive coupons cleaned up!"
