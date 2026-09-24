@@ -10,22 +10,27 @@ try {
 
 // ─── Configuration ───────────────────────────────────────────────────────────
 
+const brevoApiKey = (
+  process.env.BREVO_API_KEY ||
+  (process.env.SMTP_APP_PASSWORD?.startsWith("xkeysib-") ? process.env.SMTP_APP_PASSWORD : "")
+).trim();
+
 const smtpHost = (process.env.SMTP_HOST || "smtp-relay.brevo.com").trim();
 const smtpPort = Number(process.env.SMTP_PORT || 2525);
 const smtpEmail = (process.env.SMTP_EMAIL || "").trim();
 const smtpPassword = (process.env.SMTP_APP_PASSWORD || "").trim();
-const smtpFromEmail = (process.env.SMTP_FROM_EMAIL || smtpEmail).trim();
+const smtpFromEmail = (process.env.SMTP_FROM_EMAIL || smtpEmail || "avtar.aromas@gmail.com").trim();
 const adminEmail = (process.env.ADMIN_EMAIL || "").trim();
 const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:5173").trim();
 
-const isConfigured = !!(smtpEmail && smtpPassword);
+const isConfigured = !!(brevoApiKey || (smtpEmail && smtpPassword));
 
 // ─── Transporter ──────────────────────────────────────────────────────────────
 
 let transporter: nodemailer.Transporter | null = null;
 
 function getTransporter() {
-  if (!isConfigured) return null;
+  if (!smtpEmail || !smtpPassword) return null;
   if (!transporter) {
     transporter = nodemailer.createTransport({
       host: smtpHost,
@@ -336,6 +341,48 @@ function buildAdminAlertHtml(opts: {
 // ─── Send Helpers ──────────────────────────────────────────────────────────────
 
 async function sendMail(to: string, subject: string, html: string): Promise<boolean> {
+  // 1. Send via Brevo HTTPS REST API (Uses port 443 - NEVER blocked by cloud firewalls like Render)
+  const activeBrevoKey =
+    brevoApiKey ||
+    (process.env.BREVO_API_KEY || "").trim() ||
+    (process.env.SMTP_APP_PASSWORD?.startsWith("xkeysib-") ? process.env.SMTP_APP_PASSWORD.trim() : "");
+
+  if (activeBrevoKey) {
+    try {
+      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          "api-key": activeBrevoKey,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          sender: {
+            name: "Avtar Aromas",
+            email: smtpFromEmail || "avtar.aromas@gmail.com",
+          },
+          to: [{ email: to }],
+          subject,
+          htmlContent: html,
+        }),
+      });
+
+      if (!response.ok) {
+        const errBody = await response.text();
+        console.error(`[Email] Brevo HTTPS API error (${response.status}) sending "${subject}" → ${to}:`, errBody);
+        return false;
+      }
+
+      const data = (await response.json()) as { messageId?: string };
+      console.log(`[Email] Sent via Brevo HTTPS: "${subject}" → ${to} (MessageId: ${data.messageId || "ok"})`);
+      return true;
+    } catch (err) {
+      console.error(`[Email] Brevo HTTPS request failed for "${subject}" → ${to}:`, err);
+      return false;
+    }
+  }
+
+  // 2. Fallback to Nodemailer SMTP
   const t = getTransporter();
   if (!t) {
     console.log(`[Email] Skipped (not configured): "${subject}" → ${to}`);
@@ -349,7 +396,7 @@ async function sendMail(to: string, subject: string, html: string): Promise<bool
       subject,
       html,
     });
-    console.log(`[Email] Sent: "${subject}" → ${to}`);
+    console.log(`[Email] Sent via SMTP: "${subject}" → ${to}`);
     return true;
   } catch (err) {
     console.error(`[Email] Failed to send "${subject}" → ${to}:`, err);
