@@ -1,4 +1,12 @@
 import nodemailer from "nodemailer";
+import dns from "node:dns";
+
+// Prefer IPv4 over IPv6 to prevent ENETUNREACH in cloud container environments (e.g. Render)
+try {
+  dns.setDefaultResultOrder("ipv4first");
+} catch {
+  // Fallback for environments where not supported
+}
 
 // ─── Configuration ───────────────────────────────────────────────────────────
 
@@ -16,13 +24,19 @@ let transporter: nodemailer.Transporter | null = null;
 function getTransporter() {
   if (!isConfigured) return null;
   if (!transporter) {
+    const port = Number(process.env.SMTP_PORT || 465);
     transporter = nodemailer.createTransport({
-      service: "gmail",
+      host: process.env.SMTP_HOST || "smtp.gmail.com",
+      port,
+      secure: port === 465,
       auth: {
         user: smtpEmail,
         pass: smtpPassword,
       },
-    });
+      // Force IPv4 to prevent ENETUNREACH errors on cloud hosting (e.g. Render)
+      family: 4,
+      connectionTimeout: 15000,
+    } as any);
   }
   return transporter;
 }
