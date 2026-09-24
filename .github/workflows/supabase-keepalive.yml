@@ -15,22 +15,48 @@ jobs:
   keepalive:
     runs-on: ubuntu-latest
     steps:
+      - name: Validate Required Secrets
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          MISSING=0
+          if [ -z "$SUPABASE_URL" ]; then
+            echo "::error::Missing GitHub Secret: SUPABASE_URL"
+            MISSING=1
+          fi
+          if [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::error::Missing GitHub Secret: SUPABASE_ANON_KEY"
+            MISSING=1
+          fi
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::error::Missing GitHub Secret: SUPABASE_SERVICE_ROLE_KEY"
+            MISSING=1
+          fi
+
+          if [ "$MISSING" -eq 1 ]; then
+            echo "::error::Required secrets are missing in GitHub repository settings!"
+            echo "Please navigate to: Repo Settings -> Secrets and variables -> Actions -> Repository secrets"
+            echo "Add the following secrets:"
+            echo "  - SUPABASE_URL"
+            echo "  - SUPABASE_ANON_KEY"
+            echo "  - SUPABASE_SERVICE_ROLE_KEY"
+            echo "  - RENDER_BACKEND_URL (optional)"
+            exit 1
+          fi
+          echo "✅ All required repository secrets are present."
+
       - name: Ping Supabase (Keep Alive)
         id: ping_supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
           echo "🏓 Pinging Supabase to prevent cold sleep..."
 
-          # Read secret or use project default
-          URL="${{ secrets.SUPABASE_URL }}"
-          if [ -z "$URL" ]; then
-            URL="https://gyzeddgjserpopeicjmv.supabase.co"
-          fi
-          URL="$(printf '%s' "$URL" | tr -d '\r\n')"
-
-          KEY="${{ secrets.SUPABASE_ANON_KEY }}"
-          if [ -z "$KEY" ]; then
-            KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5emVkZGdqc2VycG9wZWljam12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5NjQ2MTEsImV4cCI6MjEwMDU0MDYxMX0.ATcF55nWXxXFiX1xfl7ZzLP6KswxOWoLbbcBDrcfFCU"
-          fi
+          URL="$(printf '%s' "$SUPABASE_URL" | tr -d '\r\n')"
+          KEY="$(printf '%s' "$SUPABASE_ANON_KEY" | tr -d '\r\n')"
 
           echo "Target Supabase endpoint: $URL"
           START_TIME=$(date +%s%3N)
@@ -55,8 +81,10 @@ jobs:
 
       - name: Ping Render Backend (Bonus Keep-Alive)
         id: ping_render
+        env:
+          RENDER_BACKEND_URL: ${{ secrets.RENDER_BACKEND_URL }}
         run: |
-          RENDER_URL="${{ secrets.RENDER_BACKEND_URL }}"
+          RENDER_URL="$(printf '%s' "$RENDER_BACKEND_URL" | tr -d '\r\n')"
           if [ -n "$RENDER_URL" ]; then
             echo "🏓 Pinging Render backend at $RENDER_URL..."
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$RENDER_URL/health" || true)
@@ -70,17 +98,12 @@ jobs:
 
       - name: Cleanup Old Cancelled/Refunded Orders (90+ days)
         id: cleanup_orders
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          SERVICE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
-          if [ -z "$SERVICE_KEY" ]; then
-            SERVICE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5emVkZGdqc2VycG9wZWljam12Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDk2NDYxMSwiZXhwIjoyMTAwNTQwNjExfQ.dzojRcYYdc0ARaxz4u67TE7uFHe2UXt1dv-Njc6WacU"
-          fi
-
-          URL="${{ secrets.SUPABASE_URL }}"
-          if [ -z "$URL" ]; then
-            URL="https://gyzeddgjserpopeicjmv.supabase.co"
-          fi
-          URL="$(printf '%s' "$URL" | tr -d '\r\n')"
+          URL="$(printf '%s' "$SUPABASE_URL" | tr -d '\r\n')"
+          SERVICE_KEY="$(printf '%s' "$SUPABASE_SERVICE_ROLE_KEY" | tr -d '\r\n')"
 
           echo "🧹 Cleaning up old cancelled/refunded orders..."
           CUTOFF=$(date -d '90 days ago' -u +%Y-%m-%dT%H:%M:%SZ)
@@ -115,17 +138,12 @@ jobs:
 
       - name: Cleanup Expired Inactive Coupons (60+ days)
         id: cleanup_coupons
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          SERVICE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
-          if [ -z "$SERVICE_KEY" ]; then
-            SERVICE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5emVkZGdqc2VycG9wZWljam12Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDk2NDYxMSwiZXhwIjoyMTAwNTQwNjExfQ.dzojRcYYdc0ARaxz4u67TE7uFHe2UXt1dv-Njc6WacU"
-          fi
-
-          URL="${{ secrets.SUPABASE_URL }}"
-          if [ -z "$URL" ]; then
-            URL="https://gyzeddgjserpopeicjmv.supabase.co"
-          fi
-          URL="$(printf '%s' "$URL" | tr -d '\r\n')"
+          URL="$(printf '%s' "$SUPABASE_URL" | tr -d '\r\n')"
+          SERVICE_KEY="$(printf '%s' "$SUPABASE_SERVICE_ROLE_KEY" | tr -d '\r\n')"
 
           echo "🧹 Cleaning up expired inactive coupons..."
           CUTOFF=$(date -d '60 days ago' -u +%Y-%m-%dT%H:%M:%SZ)
@@ -141,18 +159,20 @@ jobs:
 
       - name: Save Keep-Alive Run to Database
         if: always()
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RENDER_BACKEND_URL: ${{ secrets.RENDER_BACKEND_URL }}
         run: |
           echo "💾 Recording keep-alive execution into database..."
 
-          URL="${{ secrets.SUPABASE_URL }}"
-          if [ -z "$URL" ]; then
-            URL="https://gyzeddgjserpopeicjmv.supabase.co"
-          fi
-          URL="$(printf '%s' "$URL" | tr -d '\r\n')"
+          URL="$(printf '%s' "$SUPABASE_URL" | tr -d '\r\n')"
+          SERVICE_KEY="$(printf '%s' "$SUPABASE_SERVICE_ROLE_KEY" | tr -d '\r\n')"
+          RENDER_URL="$(printf '%s' "$RENDER_BACKEND_URL" | tr -d '\r\n')"
 
-          SERVICE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
-          if [ -z "$SERVICE_KEY" ]; then
-            SERVICE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5emVkZGdqc2VycG9wZWljam12Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDk2NDYxMSwiZXhwIjoyMTAwNTQwNjExfQ.dzojRcYYdc0ARaxz4u67TE7uFHe2UXt1dv-Njc6WacU"
+          if [ -z "$URL" ] || [ -z "$SERVICE_KEY" ]; then
+            echo "⚠️ Cannot log keep-alive to database: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not set."
+            exit 0
           fi
 
           KEEPALIVE_STATUS="${KEEPALIVE_STATUS:-success}"
@@ -206,7 +226,6 @@ jobs:
           echo "Supabase insert result: $INSERT_RES"
 
           # 2. Also notify Render backend if configured
-          RENDER_URL="${{ secrets.RENDER_BACKEND_URL }}"
           if [ -n "$RENDER_URL" ]; then
             echo "Notifying Render backend at $RENDER_URL/api/admin/keep-alive/record..."
             curl -s -X POST "$RENDER_URL/api/admin/keep-alive/record" \
@@ -225,4 +244,3 @@ jobs:
           echo "  • Execution saved to database"
           echo "  • Next scheduled run: in ~3 days"
           echo "========================================="
-
