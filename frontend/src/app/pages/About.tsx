@@ -127,8 +127,8 @@ export default function About() {
             />
             <div className="absolute -bottom-4 -left-4 sm:-bottom-6 sm:-left-6 w-28 sm:w-36 h-28 sm:h-36 border border-primary/20 pointer-events-none" />
             <div className="absolute top-6 right-6 px-4 py-3 bg-[#080807]/80 backdrop-blur-sm border border-primary/15">
-              <p className="text-2xl text-primary" style={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontWeight: 300 }}>40+</p>
-              <p className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground mt-0.5" style={{ fontFamily: "var(--font-mono)", fontWeight: 300 }}>Expressions</p>
+              <p className="text-2xl text-primary" style={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontWeight: 300 }}>2026</p>
+              <p className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground mt-0.5" style={{ fontFamily: "var(--font-mono)", fontWeight: 300 }}>Founded</p>
             </div>
           </div>
         </FadeIn>
@@ -379,8 +379,8 @@ function ContactSection() {
                   <p className="text-[10px] tracking-[0.3em] uppercase text-primary/80 mb-0.5" style={{ fontFamily: "var(--font-mono)", fontWeight: 300 }}>
                     Mobile / Call
                   </p>
-                  <a href="tel:+917976361500" className="text-foreground hover:text-primary transition-colors text-base" style={{ fontFamily: "var(--font-mono)", fontWeight: 300 }}>
-                    +91 79763 61500
+                  <a href="tel:+919928922989" className="text-foreground hover:text-primary transition-colors text-base" style={{ fontFamily: "var(--font-mono)", fontWeight: 300 }}>
+                    +91 99289 22989
                   </a>
                 </div>
               </div>

@@ -429,7 +429,7 @@ export default function ProductDetail() {
                 {[
                   { icon: Truck, text: "Free delivery ₹999+" },
                   { icon: Shield, text: "Authentic & sealed" },
-                  { icon: RotateCcw, text: "30-day returns" },
+                  { icon: RotateCcw, text: "No returns" },
                 ].map((item) => (
                   <div key={item.text} className="flex flex-col items-center gap-2 text-center">
                     <item.icon size={16} strokeWidth={1} className="text-primary" />

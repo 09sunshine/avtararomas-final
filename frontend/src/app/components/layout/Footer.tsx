@@ -99,10 +99,7 @@ export default function Footer() {
             {
               title: "Collection",
               links: [
-                ["Eau de Parfum", "/shop?category=Eau de Parfum"],
-                ["Parfum Extrait", "/shop?category=Parfum Extrait"],
-                ["Eau de Toilette", "/shop?category=Eau de Toilette"],
-                ["Gift Sets", "/shop?category=Gift Sets"],
+                ["Extrait de parfum", "/shop?category=Extrait de parfum"],
                 ["Bestsellers", "/shop?sort=bestsellers"],
                 ["New Arrivals", "/shop?filter=new"],
               ],

@@ -199,7 +199,7 @@ const PAYMENT_STATUS_CFG: Record<string, { label: string; color: string; bg: str
   cod:               { label: "Cash on Delivery", color: "#C9A96E", bg: "rgba(201,169,110,0.08)" },
 };
 
-const PRODUCT_CATEGORIES = ["Eau de Parfum", "Eau de Toilette", "Parfum Extrait", "Gift Sets"];
+const PRODUCT_CATEGORIES = ["Extrait de parfum", "Parfum Extrait", "Eau de Parfum", "Eau de Toilette", "Gift Sets"];
 const FRAGRANCE_FAMILIES  = ["Floral", "Woody", "Fresh", "Oriental", "Aquatic", "Citrus"];
 const ALL_STATUSES: OrderStatus[] = ["Processing", "Shipped", "Delivered", "Cancelled"];
 
@@ -264,7 +264,7 @@ function mapAdminOrder(order: ApiOrder): AdminOrder {
 }
 
 const EMPTY_FORM: ProductFormData = {
-  name: "", slug: "", category: "Eau de Parfum", subcategory: "Floral",
+  name: "", slug: "", category: "Extrait de parfum", subcategory: "Floral",
   price: "", originalPrice: "", stock: "20",
   description: "", tags: "", sizes: "30ml, 50ml, 100ml",
   image1: "", image2: "", featured: false, isNew: true,

@@ -15,12 +15,15 @@ const SORT_OPTIONS = [
   { value: "newest", label: "New Arrivals" },
 ];
 
-const PRICE_RANGES = [
-  { label: "Under ₹4,000", min: 0, max: 4000 },
-  { label: "₹4,000 – ₹5,500", min: 4000, max: 5500 },
-  { label: "₹5,500 – ₹7,000", min: 5500, max: 7000 },
-  { label: "₹7,000+", min: 7000, max: Infinity },
-];
+const isMatchingCategory = (productCategory?: string, targetCategory?: string) => {
+  if (!productCategory || !targetCategory) return false;
+  const a = productCategory.toLowerCase().trim();
+  const b = targetCategory.toLowerCase().trim();
+  if (a === b) return true;
+  const isExtraitA = a === "extrait de parfum" || a === "parfum extrait" || a === "extrait";
+  const isExtraitB = b === "extrait de parfum" || b === "parfum extrait" || b === "extrait";
+  return isExtraitA && isExtraitB;
+};
 
 function FilterAccordion({ title, children }: { title: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(true);
@@ -51,19 +54,26 @@ export default function Shop() {
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>(activeCategory ? [activeCategory] : []);
   const [selectedFamilies, setSelectedFamilies] = useState<string[]>(activeSubcategory ? [activeSubcategory] : []);
-  const [selectedPriceRange, setSelectedPriceRange] = useState<number | null>(null);
-  const [minRating, setMinRating] = useState(0);
 
-  // Sync search query from URL params (e.g. when navigating from the global Navbar search)
+  // Sync search query and category from URL params
   useEffect(() => {
     const urlQuery = params.get("q") || "";
     setLocalSearch(urlQuery);
+    const cat = params.get("category");
+    if (cat) {
+      setSelectedCategories([cat]);
+    }
   }, [params]);
 
   const titleRef = useRef(null);
   const titleInView = useInView(titleRef, { once: true });
 
-  const toggleCategory = (cat: string) => setSelectedCategories((prev: string[]) => prev.includes(cat) ? prev.filter((c: string) => c !== cat) : [...prev, cat]);
+  const toggleCategory = (cat: string) =>
+    setSelectedCategories((prev: string[]) =>
+      prev.some((c) => isMatchingCategory(c, cat))
+        ? prev.filter((c: string) => !isMatchingCategory(c, cat))
+        : [...prev, cat]
+    );
   const toggleFamily = (fam: string) => setSelectedFamilies((prev: string[]) => prev.includes(fam) ? prev.filter((f: string) => f !== fam) : [...prev, fam]);
 
   const [allProducts, setAllProducts] = useState([]);
@@ -104,17 +114,16 @@ export default function Shop() {
         p.category?.toLowerCase().includes(q) ||
         p.subcategory?.toLowerCase().includes(q) ||
         p.description?.toLowerCase().includes(q) ||
-        p.tags.some((t) => t.toLowerCase().includes(q))
+        p.tags?.some((t: string) => t.toLowerCase().includes(q))
       );
     }
-    if (selectedCategories.length > 0) result = result.filter((p) => selectedCategories.includes(p.category));
+    if (selectedCategories.length > 0) {
+      result = result.filter((p) =>
+        selectedCategories.some((cat) => isMatchingCategory(p.category, cat))
+      );
+    }
     if (selectedFamilies.length > 0) result = result.filter((p) => selectedFamilies.includes(p.subcategory || ""));
     if (filterNew) result = result.filter((p) => p.isNew);
-    if (selectedPriceRange !== null) {
-      const range = PRICE_RANGES[selectedPriceRange];
-      result = result.filter((p) => p.price >= range.min && p.price <= range.max);
-    }
-    if (minRating > 0) result = result.filter((p) => p.rating >= minRating);
     switch (sortBy) {
       case "price-asc": result.sort((a, b) => a.price - b.price); break;
       case "price-desc": result.sort((a, b) => b.price - a.price); break;
@@ -123,18 +132,16 @@ export default function Shop() {
       case "newest": result.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0)); break;
     }
     return result;
-  }, [allProducts, localSearch, selectedCategories, selectedFamilies, selectedPriceRange, minRating, sortBy, filterNew]);
+  }, [allProducts, localSearch, selectedCategories, selectedFamilies, sortBy, filterNew]);
 
   const clearFilters = () => {
     setSelectedCategories([]);
     setSelectedFamilies([]);
-    setSelectedPriceRange(null);
-    setMinRating(0);
     setLocalSearch("");
     setParams({});
   };
 
-  const hasFilters = selectedCategories.length > 0 || selectedFamilies.length > 0 || selectedPriceRange !== null || minRating > 0 || localSearch;
+  const hasFilters = selectedCategories.length > 0 || selectedFamilies.length > 0 || !!localSearch;
 
   return (
     <div className="min-h-screen bg-[#080807] pt-20">
@@ -226,20 +233,24 @@ export default function Shop() {
             >
               <FilterAccordion title="Category">
                 <div className="flex flex-col gap-2.5">
-                  {categories.map((cat) => (
-                    <label key={cat.id} className="flex items-center gap-3 cursor-pointer group">
-                      <div
-                        onClick={() => toggleCategory(cat.name)}
-                        className={`w-3.5 h-3.5 border flex-shrink-0 flex items-center justify-center cursor-pointer transition-all duration-300 ${selectedCategories.includes(cat.name) ? "border-primary bg-primary/20" : "border-[rgba(201,169,110,0.2)] group-hover:border-primary/40"}`}
-                      >
-                        {selectedCategories.includes(cat.name) && <span className="text-primary text-[8px]">✓</span>}
-                      </div>
-                      <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors duration-300" style={{ fontFamily: "var(--font-body)", fontWeight: 300 }}>
-                        {cat.name}
-                      </span>
-                      <span className="ml-auto text-[10px] text-muted-foreground/50" style={{ fontFamily: "var(--font-mono)" }}>{cat.productCount}</span>
-                    </label>
-                  ))}
+                  {categories.map((cat) => {
+                    const count = allProducts.filter((p: any) => isMatchingCategory(p.category, cat.name)).length;
+                    const isSelected = selectedCategories.some((c) => isMatchingCategory(c, cat.name));
+                    return (
+                      <label key={cat.id} className="flex items-center gap-3 cursor-pointer group">
+                        <div
+                          onClick={() => toggleCategory(cat.name)}
+                          className={`w-3.5 h-3.5 border flex-shrink-0 flex items-center justify-center cursor-pointer transition-all duration-300 ${isSelected ? "border-primary bg-primary/20" : "border-[rgba(201,169,110,0.2)] group-hover:border-primary/40"}`}
+                        >
+                          {isSelected && <span className="text-primary text-[8px]">✓</span>}
+                        </div>
+                        <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors duration-300" style={{ fontFamily: "var(--font-body)", fontWeight: 300 }}>
+                          {cat.name}
+                        </span>
+                        <span className="ml-auto text-[10px] text-muted-foreground/50" style={{ fontFamily: "var(--font-mono)" }}>{count}</span>
+                      </label>
+                    );
+                  })}
                 </div>
               </FilterAccordion>
 
@@ -256,45 +267,6 @@ export default function Shop() {
                       <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors duration-300" style={{ fontFamily: "var(--font-body)", fontWeight: 300 }}>
                         {f.icon} {f.name}
                       </span>
-                    </label>
-                  ))}
-                </div>
-              </FilterAccordion>
-
-              <FilterAccordion title="Price Range">
-                <div className="flex flex-col gap-2.5">
-                  {PRICE_RANGES.map((range, i) => (
-                    <label key={range.label} className="flex items-center gap-3 cursor-pointer group">
-                      <div
-                        onClick={() => setSelectedPriceRange(i === selectedPriceRange ? null : i)}
-                        className={`w-3.5 h-3.5 border flex-shrink-0 flex items-center justify-center cursor-pointer transition-all duration-300 ${selectedPriceRange === i ? "border-primary bg-primary/20" : "border-[rgba(201,169,110,0.2)] group-hover:border-primary/40"}`}
-                      >
-                        {selectedPriceRange === i && <span className="text-primary text-[8px]">✓</span>}
-                      </div>
-                      <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors duration-300" style={{ fontFamily: "var(--font-body)", fontWeight: 300 }}>
-                        {range.label}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </FilterAccordion>
-
-              <FilterAccordion title="Minimum Rating">
-                <div className="flex flex-col gap-2.5">
-                  {[4.5, 4, 3].map((rating) => (
-                    <label key={rating} className="flex items-center gap-3 cursor-pointer group">
-                      <div
-                        onClick={() => setMinRating(minRating === rating ? 0 : rating)}
-                        className={`w-3.5 h-3.5 border flex-shrink-0 flex items-center justify-center cursor-pointer transition-all duration-300 ${minRating === rating ? "border-primary bg-primary/20" : "border-[rgba(201,169,110,0.2)] group-hover:border-primary/40"}`}
-                      >
-                        {minRating === rating && <span className="text-primary text-[8px]">✓</span>}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: 5 }).map((_, j) => (
-                          <span key={j} className={`text-[10px] ${j < rating ? "text-primary" : "text-muted-foreground/30"}`}>★</span>
-                        ))}
-                        <span className="text-[10px] text-muted-foreground ml-0.5" style={{ fontFamily: "var(--font-mono)", fontWeight: 300 }}>& up</span>
-                      </div>
                     </label>
                   ))}
                 </div>

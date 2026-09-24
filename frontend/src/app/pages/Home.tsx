@@ -751,7 +751,7 @@ export default function Home() {
             {
               Icon: Award,
               title: "Long-Lasting",
-              text: "Our Parfum Extrait concentrations last 12–24 hours. We don&apos;t dilute. We don&apos;t compromise.",
+              text: "Our Parfum Extrait concentrations last 12–24 hours. We don't dilute. We don't compromise.",
             },
           ].map((feature, i) => (
             <FadeIn key={feature.title} delay={i * 0.1}>

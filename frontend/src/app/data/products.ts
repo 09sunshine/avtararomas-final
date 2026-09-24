@@ -10,10 +10,7 @@ export const fragranceFamilies = [
 ];
 
 export const categories: Category[] = [
-  { id: "1", name: "Eau de Parfum", slug: "edp", image: "https://images.unsplash.com/photo-1541643600914-78b084683702?w=600&h=800&fit=crop&auto=format", productCount: 0 },
-  { id: "2", name: "Eau de Toilette", slug: "edt", image: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=600&h=800&fit=crop&auto=format", productCount: 0 },
-  { id: "3", name: "Parfum Extrait", slug: "extrait", image: "https://images.unsplash.com/photo-1563170351-be82bc888aa4?w=600&h=800&fit=crop&auto=format", productCount: 0 },
-  { id: "4", name: "Gift Sets", slug: "gifts", image: "https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=600&h=800&fit=crop&auto=format", productCount: 0 },
+  { id: "1", name: "Extrait de parfum", slug: "extrait", image: "https://images.unsplash.com/photo-1563170351-be82bc888aa4?w=600&h=800&fit=crop&auto=format", productCount: 0 },
 ];
 
 export const products: Product[] = [];
