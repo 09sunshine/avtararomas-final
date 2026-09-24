@@ -10,8 +10,11 @@ try {
 
 // ─── Configuration ───────────────────────────────────────────────────────────
 
+const smtpHost = (process.env.SMTP_HOST || "smtp-relay.brevo.com").trim();
+const smtpPort = Number(process.env.SMTP_PORT || 2525);
 const smtpEmail = (process.env.SMTP_EMAIL || "").trim();
 const smtpPassword = (process.env.SMTP_APP_PASSWORD || "").trim();
+const smtpFromEmail = (process.env.SMTP_FROM_EMAIL || smtpEmail).trim();
 const adminEmail = (process.env.ADMIN_EMAIL || "").trim();
 const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:5173").trim();
 
@@ -24,11 +27,10 @@ let transporter: nodemailer.Transporter | null = null;
 function getTransporter() {
   if (!isConfigured) return null;
   if (!transporter) {
-    const port = Number(process.env.SMTP_PORT || 465);
     transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || "smtp.gmail.com",
-      port,
-      secure: port === 465,
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465,
       auth: {
         user: smtpEmail,
         pass: smtpPassword,
@@ -342,7 +344,7 @@ async function sendMail(to: string, subject: string, html: string): Promise<bool
 
   try {
     await t.sendMail({
-      from: `"Avtar Aromas" <${smtpEmail}>`,
+      from: `"Avtar Aromas" <${smtpFromEmail}>`,
       to,
       subject,
       html,
