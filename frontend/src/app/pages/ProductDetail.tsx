@@ -365,7 +365,7 @@ export default function ProductDetail() {
               </div>
 
               {/* Brief description */}
-              <p className="text-sm text-[#9A9388] leading-relaxed" style={{ fontFamily: "var(--font-body)", fontWeight: 300, lineHeight: 1.9 }}>
+              <p className="text-sm text-[#D4CDC3] leading-relaxed" style={{ fontFamily: "var(--font-body)", fontWeight: 300, lineHeight: 1.9 }}>
                 {product.description ? product.description.slice(0, 180) + "..." : "A luxurious fragrance crafted with the finest ingredients."}
               </p>
 
@@ -488,10 +488,10 @@ export default function ProductDetail() {
           <div className="max-w-3xl mx-auto">
             {tab === "description" && (
               <div>
-                <p className="text-base text-[#9A9388] leading-relaxed mb-8" style={{ fontFamily: "var(--font-body)", fontWeight: 300, lineHeight: 1.9 }}>{product.description || "A luxurious fragrance crafted with the finest ingredients."}</p>
+                <p className="text-base text-[#D4CDC3] leading-relaxed mb-8" style={{ fontFamily: "var(--font-body)", fontWeight: 300, lineHeight: 1.9 }}>{product.description || "A luxurious fragrance crafted with the finest ingredients."}</p>
                 <ul className="flex flex-col gap-3">
                   {["Handcrafted in small batches", "Free from synthetic musks and fixatives", "Covered by brand quality guarantee", "Ships in luxury gift packaging"].map((point) => (
-                    <li key={point} className="flex items-center gap-3 text-sm text-[#9A9388]" style={{ fontFamily: "var(--font-body)", fontWeight: 300 }}>
+                    <li key={point} className="flex items-center gap-3 text-sm text-[#D4CDC3]" style={{ fontFamily: "var(--font-body)", fontWeight: 300 }}>
                       <span className="text-primary text-xs">✦</span> {point}
                     </li>
                   ))}
@@ -523,7 +523,7 @@ export default function ProductDetail() {
                     <p className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-3" style={{ fontFamily: "var(--font-mono)", fontWeight: 300 }}>
                       Full Ingredients
                     </p>
-                    <p className="text-sm text-[#9A9388] leading-relaxed" style={{ fontFamily: "var(--font-body)", fontWeight: 300, lineHeight: 1.9 }}>
+                    <p className="text-sm text-[#D4CDC3] leading-relaxed" style={{ fontFamily: "var(--font-body)", fontWeight: 300, lineHeight: 1.9 }}>
                       {product.ingredients}
                     </p>
                   </div>
@@ -553,7 +553,7 @@ export default function ProductDetail() {
                           ))}
                         </div>
                       </div>
-                      <p className="text-sm text-[#9A9388] leading-relaxed" style={{ fontFamily: "var(--font-body)", fontWeight: 300, lineHeight: 1.8 }}>
+                      <p className="text-sm text-[#D4CDC3] leading-relaxed" style={{ fontFamily: "var(--font-body)", fontWeight: 300, lineHeight: 1.8 }}>
                         &ldquo;{r.text}&rdquo;
                       </p>
                     </div>

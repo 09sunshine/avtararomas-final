@@ -5,29 +5,20 @@ import { ArrowRight, Phone, Mail, CheckCircle2, AlertCircle, Loader2 } from "luc
 import { sendContactMessage } from "../lib/api";
 import StoryHeroArt from "../components/about/StoryHeroArt";
 
-const TEAM = [
-  {
-    name: "Arjun Avtar",
-    title: "Founder & Master Perfumer",
-    bio: "Trained under Grasse's finest noses, Arjun returned to India to bottle the subcontinent's soul — oud from Assam, rose from Kannauj, sandalwood from Mysore. Every formula is his handwriting.",
-    initial: "A",
-    img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&auto=format&fit=crop&q=80",
-  },
-  {
-    name: "Meera Avtar",
-    title: "Creative Director",
-    bio: "Meera shapes the visual and sensory language of every bottle, campaign, and unboxing ritual. She believes packaging is the first note of any fragrance.",
-    initial: "M",
-    img: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600&auto=format&fit=crop&q=80",
-  },
-  {
-    name: "Rohan Kapoor",
-    title: "Head of Sourcing",
-    bio: "Rohan travels to the source — oud traders in Cambodia, rose farmers in Bulgaria, vetiver fields in Haiti. His obsession is purity at origin.",
-    initial: "R",
-    img: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=600&auto=format&fit=crop&q=80",
-  },
-];
+const PERFUMER = {
+  name: "Akanksha Dodiya",
+  title: "Founder",
+  bio: [
+    "I’m Akanksha, founder of Avtar Aromas.",
+    "I have always loved fragrances, but I have always been particularly conscious of longevity and the impression a fragrance leaves behind.",
+    "When I started Avtar Aromas, I wanted to create something that felt personal — something rooted in where I come from, but not limited by it.",
+    "Avtar Aromas is my way of turning places, personalities and moments into something you can wear.",
+    "The Five Signatures are just where we begin.",
+  ],
+  quote: "Every person carries a different Avtar for every moment. I wanted to turn those moods, personalities and stories into fragrances, rooted in Rajasthan.",
+  initial: "A",
+  img: "/founder.jpg",
+};
 
 const VALUES = [
   {
@@ -106,7 +97,7 @@ export default function About() {
           <h2 className="text-3xl sm:text-4xl md:text-5xl mb-8 leading-tight" style={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontWeight: 300 }}>
             A home in Rajasthan.<br />A dream of honest parfum.
           </h2>
-          <div className="flex flex-col gap-5 text-[#9A9388] text-base" style={{ fontFamily: "var(--font-body)", fontWeight: 300, lineHeight: 1.9 }}>
+          <div className="flex flex-col gap-5 text-[#D4CDC3] text-base" style={{ fontFamily: "var(--font-body)", fontWeight: 300, lineHeight: 1.9 }}>
             <p>
               Rajasthan has never been just one mood.
             </p>
@@ -151,7 +142,7 @@ export default function About() {
                 <div className="bg-[#080807] px-7 py-8 h-full flex flex-col gap-4">
                   <span className="text-xs tracking-[0.4em] uppercase text-primary" style={{ fontFamily: "var(--font-mono)", fontWeight: 300 }}>{String(i + 1).padStart(2, "0")}</span>
                   <h3 className="text-xl" style={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontWeight: 300 }}>{v.label}</h3>
-                  <p className="text-sm text-[#9A9388] leading-relaxed flex-1" style={{ fontFamily: "var(--font-body)", fontWeight: 300, lineHeight: 1.85 }}>{v.body}</p>
+                  <p className="text-sm text-[#D4CDC3] leading-relaxed flex-1" style={{ fontFamily: "var(--font-body)", fontWeight: 300, lineHeight: 1.85 }}>{v.body}</p>
                 </div>
               </FadeIn>
             ))}
@@ -159,37 +150,56 @@ export default function About() {
         </div>
       </section>
 
-      {/* ── Team ── */}
+      {/* ── Team / Behind the bottle ── */}
       <section className="border-t border-[rgba(201,169,110,0.1)] py-20 sm:py-28">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-8">
           <FadeIn>
             <p className="text-[10px] tracking-[0.5em] uppercase text-primary mb-4" style={{ fontFamily: "var(--font-body)", fontWeight: 300 }}>
               The people
             </p>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl mb-14 sm:mb-20" style={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontWeight: 300 }}>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl mb-12 sm:mb-16" style={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontWeight: 300 }}>
               Behind the bottle
             </h2>
           </FadeIn>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-10">
-            {TEAM.map((p, i) => (
-              <FadeIn key={p.name} delay={i * 0.12}>
-                <div className="flex flex-col gap-5 group">
-                  <div className="relative overflow-hidden aspect-[4/5] bg-[#0A0908]">
-                    <img
-                      src={p.img}
-                      alt={p.name}
-                      className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#080807]/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl text-foreground" style={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontWeight: 300 }}>{p.name}</h3>
-                    <p className="text-[10px] tracking-[0.3em] uppercase text-primary mt-0.5 mb-3" style={{ fontFamily: "var(--font-mono)", fontWeight: 300 }}>{p.title}</p>
-                    <p className="text-sm text-[#9A9388]" style={{ fontFamily: "var(--font-body)", fontWeight: 300, lineHeight: 1.85 }}>{p.bio}</p>
-                  </div>
+
+          <div className="max-w-[1060px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-center">
+            <FadeIn className="lg:col-span-5" delay={0.1}>
+              <div className="relative group mx-auto max-w-[420px] lg:max-w-none">
+                <div className="relative overflow-hidden aspect-[4/5] bg-[#0A0908] border border-[rgba(201,169,110,0.15)] shadow-2xl">
+                  <img
+                    src={PERFUMER.img}
+                    alt={PERFUMER.name}
+                    className="w-full h-full object-cover object-[center_28%] group-hover:scale-105 transition-transform duration-700"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#080807]/60 via-transparent to-transparent opacity-60" />
                 </div>
-              </FadeIn>
-            ))}
+                {/* Decorative gold corner accents */}
+                <div className="absolute -bottom-3 -right-3 w-16 h-16 border-r border-b border-primary/30 pointer-events-none hidden sm:block" />
+                <div className="absolute -top-3 -left-3 w-16 h-16 border-l border-t border-primary/30 pointer-events-none hidden sm:block" />
+              </div>
+            </FadeIn>
+
+            <FadeIn className="lg:col-span-7 flex flex-col justify-center" delay={0.2}>
+              <div>
+                <p className="text-[10px] sm:text-xs tracking-[0.35em] uppercase text-primary mb-2" style={{ fontFamily: "var(--font-mono)", fontWeight: 300 }}>
+                  {PERFUMER.title}
+                </p>
+                <h3 className="text-3xl sm:text-4xl lg:text-5xl text-foreground mb-5" style={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontWeight: 300 }}>
+                  {PERFUMER.name}
+                </h3>
+                <div className="w-12 h-px bg-primary/40 mb-6" />
+                <div className="space-y-3.5 text-sm sm:text-base text-[#D4CDC3] leading-relaxed mb-6" style={{ fontFamily: "var(--font-body)", fontWeight: 300, lineHeight: 1.85 }}>
+                  {PERFUMER.bio.map((paragraph, idx) => (
+                    <p key={idx}>{paragraph}</p>
+                  ))}
+                </div>
+                <div className="border-l border-primary/30 pl-5 py-2 bg-[#0A0908]/50">
+                  <p className="text-sm sm:text-base text-[#C9A96E]/90 italic" style={{ fontFamily: "var(--font-display)", fontWeight: 300 }}>
+                    "{PERFUMER.quote}"
+                  </p>
+                </div>
+              </div>
+            </FadeIn>
           </div>
         </div>
       </section>
@@ -216,7 +226,7 @@ export default function About() {
             <FadeIn key={item.q} delay={i * 0.05}>
               <div className="p-8 bg-[#0A0908] border border-[rgba(201,169,110,0.1)]">
                 <h3 className="text-lg text-foreground mb-3" style={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontWeight: 300 }}>{item.q}</h3>
-                <p className="text-sm text-[#9A9388]" style={{ fontFamily: "var(--font-body)", fontWeight: 300, lineHeight: 1.85 }}>{item.a}</p>
+                <p className="text-sm text-[#D4CDC3]" style={{ fontFamily: "var(--font-body)", fontWeight: 300, lineHeight: 1.85 }}>{item.a}</p>
               </div>
             </FadeIn>
           ))}
@@ -351,7 +361,7 @@ function ContactSection() {
           <h2 className="text-3xl sm:text-4xl md:text-5xl mb-8" style={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontWeight: 300 }}>
             Contact Us
           </h2>
-          <div className="flex flex-col gap-6 text-[#9A9388]" style={{ fontFamily: "var(--font-body)", fontWeight: 300, lineHeight: 1.9 }}>
+          <div className="flex flex-col gap-6 text-[#D4CDC3]" style={{ fontFamily: "var(--font-body)", fontWeight: 300, lineHeight: 1.9 }}>
             <p>
               For bespoke orders, press enquiries, or collaboration proposals, reach out directly to our concierge team.
             </p>

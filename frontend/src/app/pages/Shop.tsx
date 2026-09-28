@@ -166,7 +166,7 @@ export default function Shop() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setFiltersOpen(!filtersOpen)}
-              className="flex items-center gap-2 text-xs tracking-[0.2em] uppercase text-[#9A9388] hover:text-foreground transition-colors border border-[rgba(201,169,110,0.15)] hover:border-primary/30 px-3 sm:px-4 py-2.5"
+              className="flex items-center gap-2 text-xs tracking-[0.2em] uppercase text-[#D4CDC3] hover:text-foreground transition-colors border border-[rgba(201,169,110,0.15)] hover:border-primary/30 px-3 sm:px-4 py-2.5"
               style={{ fontFamily: "var(--font-body)", fontWeight: 300 }}
             >
               <SlidersHorizontal size={13} strokeWidth={1.5} />
@@ -192,7 +192,7 @@ export default function Shop() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="bg-[#0A0908] border border-[rgba(201,169,110,0.15)] text-xs text-[#9A9388] px-2 sm:px-4 py-2.5 outline-none focus:border-primary/40 cursor-pointer max-w-[120px] sm:max-w-none"
+              className="bg-[#0A0908] border border-[rgba(201,169,110,0.15)] text-xs text-[#D4CDC3] px-2 sm:px-4 py-2.5 outline-none focus:border-primary/40 cursor-pointer max-w-[120px] sm:max-w-none"
               style={{ fontFamily: "var(--font-body)", fontWeight: 300 }}
             >
               {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}

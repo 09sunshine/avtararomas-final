@@ -382,7 +382,7 @@ export default function Home() {
               </h1>
 
               <p
-                className="text-base text-[#9A9388] leading-relaxed mb-12 max-w-md"
+                className="text-base text-[#D4CDC3] leading-relaxed mb-12 max-w-md"
                 style={{ fontFamily: "var(--font-body)", fontWeight: 300, lineHeight: 1.8 }}
               >
                 Avtar Aromas is a Rajasthan-born fragrance house built around one simple thought: "You are not just one version of yourself"<br></br>
@@ -400,7 +400,7 @@ export default function Home() {
                 </Link>
                 <button
                   onClick={() => setStoryOpen(true)}
-                  className="flex items-center gap-2 text-xs tracking-[0.2em] uppercase text-[#9A9388] hover:text-primary transition-colors duration-400 border-b border-transparent hover:border-primary/40 pb-0.5"
+                  className="flex items-center gap-2 text-xs tracking-[0.2em] uppercase text-[#D4CDC3] hover:text-primary transition-colors duration-400 border-b border-transparent hover:border-primary/40 pb-0.5"
                   style={{ fontFamily: "var(--font-body)", fontWeight: 300 }}
                 >
                   <Play size={11} strokeWidth={1.5} />
@@ -475,18 +475,7 @@ export default function Home() {
               style={{ height: "72%" }}
             />
 
-            {/* Stats badge */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 1, delay: 1.2, ease }}
-              className="absolute top-[15%] left-0 bg-[#0A0908]/90 backdrop-blur-sm border border-[rgba(201,169,110,0.2)] px-5 py-4 z-20"
-            >
-              <p className="text-3xl text-foreground" style={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontWeight: 300 }}>City</p>
-              <p className="text-[9px] tracking-[0.35em] uppercase text-muted-foreground mt-0.5" style={{ fontFamily: "var(--font-mono)", fontWeight: 300 }}>
-                based fragrances
-              </p>
-            </motion.div>
+
 
             {/* Corner ornament */}
             <div className="absolute top-0 right-0 w-12 h-12 border-t border-r border-primary/20 pointer-events-none z-30" />
@@ -550,7 +539,7 @@ export default function Home() {
               >
                 Born from a love of <em style={{ fontStyle: "italic" }}>rare things</em>
               </h2>
-              <div className="flex flex-col gap-5 text-[#9A9388]" style={{ fontFamily: "var(--font-body)", fontWeight: 300, lineHeight: 1.9 }}>
+              <div className="flex flex-col gap-5 text-[#D4CDC3]" style={{ fontFamily: "var(--font-body)", fontWeight: 300, lineHeight: 1.9 }}>
                 <p className="text-base">
                   We believe fragrance is more than just something that smells good. It becomes part of the presence you choose to carry.
                 </p>
@@ -635,7 +624,7 @@ export default function Home() {
             >
               Fragrance Families
             </h2>
-            <p className="text-[#9A9388] text-base max-w-md mx-auto" style={{ fontFamily: "var(--font-body)", fontWeight: 300 }}>
+            <p className="text-[#D4CDC3] text-base max-w-md mx-auto" style={{ fontFamily: "var(--font-body)", fontWeight: 300 }}>
               Every great perfume belongs to a family. Find the one that speaks to you.
             </p>
           </div>
@@ -804,7 +793,7 @@ export default function Home() {
                   </div>
                   {/* Quote */}
                   <p
-                    className="text-sm text-[#9A9388] leading-relaxed flex-1"
+                    className="text-sm text-[#D4CDC3] leading-relaxed flex-1"
                     style={{ fontFamily: "var(--font-body)", fontWeight: 300, lineHeight: 1.9 }}
                   >
                     &ldquo;{t.text}&rdquo;
@@ -838,7 +827,7 @@ export default function Home() {
               Join the Inner Circle
             </h2>
             <p
-              className="text-[#9A9388] mb-12 max-w-md mx-auto text-base"
+              className="text-[#D4CDC3] mb-12 max-w-md mx-auto text-base"
               style={{ fontFamily: "var(--font-body)", fontWeight: 300, lineHeight: 1.8 }}
             >
               Rare drops, private events, olfactory stories. For those who appreciate the extraordinary.

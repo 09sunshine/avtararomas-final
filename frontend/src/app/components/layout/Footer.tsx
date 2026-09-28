@@ -1,7 +1,22 @@
 import { Link } from "react-router";
-import { Instagram, Twitter, Facebook, Youtube } from "lucide-react";
+import { Instagram, Linkedin, Facebook, Youtube } from "lucide-react";
 import { useState } from "react";
 import { subscribeToNewsletter } from "../../lib/api";
+
+function XIcon({ size = 14, className = "" }: { size?: number; strokeWidth?: number; className?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  );
+}
 
 export default function Footer() {
   const [email, setEmail] = useState("");
@@ -80,14 +95,22 @@ export default function Footer() {
             <p className="text-sm text-muted-foreground leading-relaxed mb-8 max-w-xs" style={{ fontFamily: "var(--font-body)", fontWeight: 300 }}>
               Handcrafted in small batches using the world&apos;s finest natural ingredients. Each fragrance is a composition — an expression of emotion, memory, and craft.
             </p>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               {[
-                { Icon: Instagram, href: "https://www.instagram.com/avtar_aromas" },
-                { Icon: Twitter, href: "https://www.instagram.com/avtar_aromas" },
-                { Icon: Facebook, href: "#" },
-                { Icon: Youtube, href: "https://www.youtube.com/@Akayyys_life" },
-              ].map(({ Icon, href }, i) => (
-                <a key={i} href={href} className="w-9 h-9 border border-[rgba(201,169,110,0.2)] flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/40 transition-all duration-400">
+                { Icon: Instagram, href: "https://www.instagram.com/avtar_aromas", label: "Instagram" },
+                { Icon: XIcon, href: "#", label: "X (Twitter)" },
+                { Icon: Linkedin, href: "#", label: "LinkedIn" },
+                { Icon: Facebook, href: "#", label: "Facebook" },
+                { Icon: Youtube, href: "https://www.youtube.com/@Akayyys_life", label: "YouTube" },
+              ].map(({ Icon, href, label }, i) => (
+                <a
+                  key={i}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={label}
+                  className="w-9 h-9 border border-[rgba(201,169,110,0.2)] flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/40 transition-all duration-400"
+                >
                   <Icon size={14} strokeWidth={1.5} />
                 </a>
               ))}

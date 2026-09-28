@@ -285,7 +285,7 @@ export default function PerfumeArtPanel({
         
         {description && (
           <p
-            className="text-xs lg:text-sm text-[#9A9388] leading-relaxed font-light"
+            className="text-xs lg:text-sm text-[#D4CDC3] leading-relaxed font-light"
           >
             {description}
           </p>

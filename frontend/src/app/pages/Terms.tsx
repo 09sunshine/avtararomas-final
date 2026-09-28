@@ -36,7 +36,7 @@ export default function Terms() {
         </FadeIn>
 
         <div className="mt-14 grid grid-cols-1 lg:grid-cols-4 gap-12">
-          <div className="lg:col-span-3 flex flex-col gap-8 text-[#9A9388]" style={{ fontFamily: "var(--font-body)", fontWeight: 300, lineHeight: 1.9 }}>
+          <div className="lg:col-span-3 flex flex-col gap-8 text-[#D4CDC3]" style={{ fontFamily: "var(--font-body)", fontWeight: 300, lineHeight: 1.9 }}>
             <FadeIn>
               <h2 className="text-xl text-foreground" style={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontWeight: 300 }}>1. Acceptance of Terms</h2>
               <p>By accessing or using the Avtar Aromas website, you agree to be bound by these Terms of Use. If you do not agree, please do not use our site or services.</p>
