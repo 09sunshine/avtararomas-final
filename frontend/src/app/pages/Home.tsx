@@ -521,11 +521,6 @@ export default function Home() {
               {/* Gold frame accent */}
               <div className="absolute -bottom-5 -right-5 w-40 h-40 border border-primary/20 pointer-events-none" />
               <div className="absolute -top-5 -left-5 w-40 h-40 border border-primary/10 pointer-events-none" />
-              {/* Floating label */}
-              <div className="absolute bottom-8 left-8 bg-[#080807]/90 backdrop-blur-sm border border-[rgba(201,169,110,0.2)] px-6 py-4">
-                <p className="text-xs tracking-[0.3em] uppercase text-primary mb-1" style={{ fontFamily: "var(--font-mono)", fontWeight: 300 }}>Founded</p>
-                <p className="text-3xl text-foreground" style={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontWeight: 300 }}>2026</p>
-              </div>
             </div>
           </FadeIn>
 

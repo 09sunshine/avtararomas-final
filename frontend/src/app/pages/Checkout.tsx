@@ -49,7 +49,7 @@ export default function Checkout() {
 
   const [currentStep, setCurrentStep] = useState<Step>("address");
   const [shippingOption, setShippingOption] = useState("standard");
-  const [paymentMethod, setPaymentMethod] = useState<"razorpay" | "cod">("razorpay");
+  const paymentMethod = "razorpay";
   const [processing, setProcessing] = useState(false);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [transactionId, setTransactionId] = useState<string | null>(null);
@@ -190,14 +190,6 @@ export default function Checkout() {
         paymentMethod,
       });
 
-      if (paymentMethod === "cod") {
-        setOrderNumber(createdOrder.orderNumber);
-        cartDispatch({ type: "CLEAR" });
-        setCurrentStep("confirm");
-        setProcessing(false);
-        return;
-      }
-
       // Online Razorpay Payment Flow
       const loadRazorpay = (): Promise<boolean> => {
         return new Promise((resolve) => {
@@ -222,7 +214,7 @@ export default function Checkout() {
 
       const razorpayLoaded = await loadRazorpay();
       if (!razorpayLoaded || typeof window === "undefined" || !window.Razorpay) {
-        setCheckoutError("Razorpay payment gateway failed to load. Please check your internet connection or choose Cash on Delivery.");
+        setCheckoutError("Payment gateway failed to load. Please check your internet connection and try again.");
         setProcessing(false);
         return;
       }
@@ -268,7 +260,7 @@ export default function Checkout() {
         modal: {
           ondismiss: async function () {
             setProcessing(false);
-            setCheckoutError("Payment cancelled. You can try paying again or choose Cash on Delivery.");
+            setCheckoutError("Payment was cancelled. You can try paying again to complete your order.");
             await markPaymentFailed({ orderId: createdOrder.id, error: "Payment popup closed" }).catch(() => {});
           },
         },
@@ -565,22 +557,33 @@ export default function Checkout() {
                   <h2 className="text-2xl text-foreground mb-8" style={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontWeight: 300 }}>
                     Payment Method
                   </h2>
-                  <div className="flex flex-col gap-3 mb-8">
-                    {[
-                      { id: "razorpay" as const, label: "Pay Online", desc: "Cards, UPI, Net Banking, Wallets via Razorpay" },
-                      { id: "cod" as const, label: "Cash on Delivery", desc: "Pay when your order arrives" },
-                    ].map((opt) => (
-                      <label key={opt.id} className={`flex items-center gap-5 p-5 border cursor-pointer transition-all duration-300 ${paymentMethod === opt.id ? "border-primary bg-primary/5" : "border-[rgba(201,169,110,0.15)] hover:border-primary/30"}`}>
-                        <div className={`w-4 h-4 border-2 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${paymentMethod === opt.id ? "border-primary" : "border-muted-foreground/30"}`}>
-                          {paymentMethod === opt.id && <div className="w-2 h-2 rounded-full bg-primary" />}
+                  <div className="border border-primary/40 bg-primary/5 p-6 mb-8 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+                    <div className="flex items-start gap-4">
+                      <div className="w-5 h-5 rounded-full border-2 border-primary flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+                          <p className="text-sm font-medium text-foreground tracking-wide" style={{ fontFamily: "var(--font-body)" }}>
+                            Pay Online (Cards, UPI, Net Banking, Wallets)
+                          </p>
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] tracking-wider uppercase font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <ShieldCheck size={12} /> 100% Secure
+                          </span>
                         </div>
-                        <input type="radio" className="sr-only" value={opt.id} checked={paymentMethod === opt.id} onChange={() => setPaymentMethod(opt.id)} />
-                        <div>
-                          <p className="text-sm text-foreground" style={{ fontFamily: "var(--font-body)", fontWeight: 300 }}>{opt.label}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5" style={{ fontFamily: "var(--font-mono)", fontWeight: 300 }}>{opt.desc}</p>
+                        <p className="text-xs text-muted-foreground mb-4" style={{ fontFamily: "var(--font-body)", fontWeight: 300 }}>
+                          Seamless online payment via Razorpay. Fast, encrypted, and trusted across all Indian banks and UPI apps.
+                        </p>
+                        <div className="flex items-center flex-wrap gap-2 pt-3 border-t border-[rgba(201,169,110,0.15)]">
+                          <span className="text-[10px] tracking-[0.15em] uppercase text-muted-foreground font-mono">Accepted:</span>
+                          <span className="text-[10px] px-2.5 py-1 bg-[#080807] border border-[rgba(201,169,110,0.2)] text-primary tracking-wider uppercase">UPI / QR</span>
+                          <span className="text-[10px] px-2.5 py-1 bg-[#080807] border border-[rgba(201,169,110,0.2)] text-primary tracking-wider uppercase">Credit / Debit Cards</span>
+                          <span className="text-[10px] px-2.5 py-1 bg-[#080807] border border-[rgba(201,169,110,0.2)] text-primary tracking-wider uppercase">Net Banking</span>
+                          <span className="text-[10px] px-2.5 py-1 bg-[#080807] border border-[rgba(201,169,110,0.2)] text-primary tracking-wider uppercase">Wallets</span>
                         </div>
-                      </label>
-                    ))}
+                      </div>
+                    </div>
                   </div>
 
                   <div className="bg-[#0A0908] border border-[rgba(201,169,110,0.08)] p-5 mb-8">
@@ -607,7 +610,7 @@ export default function Checkout() {
                             Processing...
                           </>
                         ) : (
-                          <>Place Order — {formatPrice(total)} <ArrowRight size={14} strokeWidth={1.5} /></>
+                          <>Pay Now — {formatPrice(total)} <ArrowRight size={14} strokeWidth={1.5} /></>
                         )}
                       </button>
                       {checkoutError && (

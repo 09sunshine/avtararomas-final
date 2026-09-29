@@ -219,9 +219,9 @@ export default function About() {
             { q: "Are your fragrances cruelty-free?", a: "Yes. Every Avtar Aromas expression is cruelty-free and vegan-certified. We never test on animals." },
             { q: "How long will my scent last?", a: "Our Parfum Extrait concentrations last 12–24 hours. We do not dilute with fillers." },
             { q: "Do you ship internationally?", a: "Yes. We ship worldwide with tracked, insured delivery. Free shipping on orders above ₹5,000." },
-            { q: "Can I visit the atelier?", a: "The Kannauj Atelier is open by appointment for private consultations and workshops." },
-            { q: "What is your return policy?", a: "If a bottle arrives damaged or the scent does not match expectations within 14 days, we will replace or refund without question." },
-            { q: "Are your ingredients ethically sourced?", a: "We name the origin of every key ingredient and maintain direct relationships with growers and harvesters." },
+            { q: "Are your perfumes unisex and long-lasting?", a: "Yes. All Five Signatures are unisex, high-concentration parfum made for every personality and crafted for long-lasting wear." },
+            { q: "What is your return policy?", a: "Non-returnable. All sales are final and we do not accept returns or exchanges once the order is confirmed." },
+            { q: "What is your average delivery duration?", a: "4–5 days. Orders are typically delivered within 4 to 5 business days from the date of shipment." },
           ].map((item, i) => (
             <FadeIn key={item.q} delay={i * 0.05}>
               <div className="p-8 bg-[#0A0908] border border-[rgba(201,169,110,0.1)]">

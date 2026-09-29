@@ -355,41 +355,43 @@ ordersRouter.post("/", optionalAuth, async (req, res, next) => {
 
     const total = Math.max(0, subtotal + shippingFee - discount);
 
-    const isRazorpay = body.paymentMethod === "razorpay";
-    const paymentStatus = isRazorpay ? "pending" : "cod";
+    if (body.paymentMethod === "cod") {
+      throw new ApiError(400, "Cash on Delivery is no longer available. Please complete your purchase using Pay Online.");
+    }
+
+    const paymentMethod = "razorpay";
+    const paymentStatus = "pending";
     const orderNumber = toOrderNumber();
 
     let razorpayOrderId: string | null = null;
 
-    if (isRazorpay) {
-      if (razorpay) {
-        try {
-          const razorpayOrder = await razorpay.orders.create({
-            amount: Math.round(total * 100), // Amount in paise
-            currency: "INR",
-            receipt: orderNumber,
-            notes: {
-              customer_email: customer.email,
-              customer_name: customer.name,
-            },
-          });
-          razorpayOrderId = razorpayOrder.id;
-        } catch (rzpErr: any) {
-          console.error("Razorpay order creation failed:", rzpErr);
-          const isAuthError = rzpErr?.statusCode === 401 || rzpErr?.error?.description === "Authentication failed";
-          if (isAuthError) {
-            throw new ApiError(
-              400,
-              `Razorpay Authentication Failed: Invalid Key Secret in backend/.env. Please replace RAZORPAY_KEY_SECRET with your real secret key from https://dashboard.razorpay.com/app/keys.`
-            );
-          }
-          const rzpMsg = rzpErr?.error?.description || rzpErr?.message || "Razorpay API error";
-          throw new ApiError(400, `Razorpay Order Error: ${rzpMsg}`);
+    if (razorpay) {
+      try {
+        const razorpayOrder = await razorpay.orders.create({
+          amount: Math.round(total * 100), // Amount in paise
+          currency: "INR",
+          receipt: orderNumber,
+          notes: {
+            customer_email: customer.email,
+            customer_name: customer.name,
+          },
+        });
+        razorpayOrderId = razorpayOrder.id;
+      } catch (rzpErr: any) {
+        console.error("Razorpay order creation failed:", rzpErr);
+        const isAuthError = rzpErr?.statusCode === 401 || rzpErr?.error?.description === "Authentication failed";
+        if (isAuthError) {
+          throw new ApiError(
+            400,
+            `Razorpay Authentication Failed: Invalid Key Secret in backend/.env. Please replace RAZORPAY_KEY_SECRET with your real secret key from https://dashboard.razorpay.com/app/keys.`
+          );
         }
-      } else {
-        // Fallback for development/testing when keys are placeholders
-        razorpayOrderId = `order_mock_${Math.random().toString(36).slice(2, 12)}`;
+        const rzpMsg = rzpErr?.error?.description || rzpErr?.message || "Razorpay API error";
+        throw new ApiError(400, `Razorpay Order Error: ${rzpMsg}`);
       }
+    } else {
+      // Fallback for development/testing when keys are placeholders
+      razorpayOrderId = `order_mock_${Math.random().toString(36).slice(2, 12)}`;
     }
 
     const { data: order, error } = await supabase
@@ -406,7 +408,7 @@ ordersRouter.post("/", optionalAuth, async (req, res, next) => {
         discount,
         total,
         coupon_code: validCouponCode || null,
-        payment_method: body.paymentMethod || null,
+        payment_method: paymentMethod,
         payment_status: paymentStatus,
         razorpay_order_id: razorpayOrderId,
         notes: body.notes || null,
@@ -444,11 +446,6 @@ ordersRouter.post("/", optionalAuth, async (req, res, next) => {
     const { error: itemsError } = await supabase.from("order_items").insert(itemsPayload);
     if (itemsError) {
       throw new Error(itemsError.message);
-    }
-
-    // If Cash on Delivery, deduct stock immediately
-    if (body.paymentMethod === "cod") {
-      await syncInventoryAndDeductStock(order.id);
     }
 
     const createdOrder = await getOrderById(order.id);
