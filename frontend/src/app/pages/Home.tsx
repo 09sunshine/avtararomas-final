@@ -196,7 +196,7 @@ function StoryModal({ open, onClose }: { open: boolean; onClose: () => void }) {
               </p>
               <div className="flex items-center justify-between gap-2 pt-1 border-t border-[rgba(201,169,110,0.1)]">
                 <div>
-                  <p className="text-xs text-foreground" style={{ fontFamily: "var(--font-display)", fontWeight: 400 }}>Akanksha Dodiya</p>
+                  <p className="text-xs text-foreground" style={{ fontFamily: "var(--font-display)", fontWeight: 400 }}>Akanksha Maheshwari</p>
                   <p className="text-[9px] tracking-[0.25em] uppercase text-muted-foreground" style={{ fontFamily: "var(--font-mono)", fontWeight: 300 }}>
                     Founder &amp; Master Perfumer
                   </p>

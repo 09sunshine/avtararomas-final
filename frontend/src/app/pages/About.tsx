@@ -4,9 +4,10 @@ import { motion, useInView } from "motion/react";
 import { ArrowRight, Phone, Mail, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { sendContactMessage } from "../lib/api";
 import StoryHeroArt from "../components/about/StoryHeroArt";
+import FounderCarousel from "../components/about/FounderCarousel";
 
 const PERFUMER = {
-  name: "Akanksha Dodiya",
+  name: "Akanksha Maheshwari",
   title: "Founder",
   bio: [
     "I’m Akanksha, founder of Avtar Aromas.",
@@ -17,7 +18,6 @@ const PERFUMER = {
   ],
   quote: "Every person carries a different Avtar for every moment. I wanted to turn those moods, personalities and stories into fragrances, rooted in Rajasthan.",
   initial: "A",
-  img: "/founder.jpg",
 };
 
 const VALUES = [
@@ -164,19 +164,7 @@ export default function About() {
 
           <div className="max-w-[1060px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-center">
             <FadeIn className="lg:col-span-5" delay={0.1}>
-              <div className="relative group mx-auto max-w-[420px] lg:max-w-none">
-                <div className="relative overflow-hidden aspect-[4/5] bg-[#0A0908] border border-[rgba(201,169,110,0.15)] shadow-2xl">
-                  <img
-                    src={PERFUMER.img}
-                    alt={PERFUMER.name}
-                    className="w-full h-full object-cover object-[center_28%] group-hover:scale-105 transition-transform duration-700"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#080807]/60 via-transparent to-transparent opacity-60" />
-                </div>
-                {/* Decorative gold corner accents */}
-                <div className="absolute -bottom-3 -right-3 w-16 h-16 border-r border-b border-primary/30 pointer-events-none hidden sm:block" />
-                <div className="absolute -top-3 -left-3 w-16 h-16 border-l border-t border-primary/30 pointer-events-none hidden sm:block" />
-              </div>
+              <FounderCarousel />
             </FadeIn>
 
             <FadeIn className="lg:col-span-7 flex flex-col justify-center" delay={0.2}>
